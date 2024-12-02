@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Website</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="navBar">
+        <button id="homePageButton">Home</button>
+        <button id="registerPageButton">Register</button>
+        <button id="loginPageButton">Login</button>
+    </div>
+
+    <template id="homeTemplate">
+        <input id="search" type="text" placeholder="Search">
+        <h2>Home</h2>
+        <p>Welcome to home</p>
+    </template>
+
+    <template id="registerTemplate">
+        <h2>Register</h2>
+        <input id="registerUsername" type="text" placeholder="Username">
+        <input id="registerPassword" type="password" placeholder="Password">
+        <input id="confirmPassword" type="password"placeholder="Confirm Password">
+
+        <div id="teamSelection">
+            <br>
+            <input type="radio" name="team" value="Red Bull"> Red Bull 
+            <br>
+            <input type="radio" name="team" value="Ferrari"> Ferrari 
+            <br>
+            <input type="radio" name="team" value="McLaren"> McLaren 
+            <br>
+            <input type="radio" name="team" value="Mercedes"> Mercedes 
+            <br>
+            <input type="radio" name="team" value="Aston Martin"> Aston Martin 
+            <br>
+            <input type="radio" name="team" value="Alpine"> Alpine 
+            <br>
+            <input type="radio" name="team" value="Haas"> Haas 
+            <br>
+            <input type="radio" name="team" value="RB"> RB 
+            <br>
+            <input type="radio" name="team" value="Williams"> Williams 
+            <br>
+            <input type="radio" name="team" value="Sauber"> Sauber
+            <br>
+        </div>
+
+        <button id="registerButton" onclick="register()">Register</button>
+    </template>
+
+    <template id="loginTemplate">
+        <h2>Login</h2>
+        <input id="loginUsername" type="text" placeholder="Username">
+        <input id="loginPassword" type="password" placeholder="Password">
+        <button id="loginButton" onclick="login()">Login</button>
+    </template>
+
+    <!--This is where loaded content will be-->
+    <div id="content"></div>
+
+    <script src="./JavaScript/index.js"></script>
+</body>
+</html>
