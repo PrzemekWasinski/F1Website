@@ -11,12 +11,27 @@
         <button id="homePageButton">Home</button>
         <button id="registerPageButton">Register</button>
         <button id="loginPageButton">Login</button>
+        <button id="logOutButton">Log Out</button>
     </div>
 
     <template id="homeTemplate">
-        <input id="search" type="text" placeholder="Search">
-        <h2>Home</h2>
-        <p>Welcome to home</p>
+        <div class="home-content">
+            <h2>Home Page</h2>
+            <button onclick="upload()" id="uploadButton" style="display: none">Upload Post</button>
+            
+            <div id="uploadPopup" class="popup" style="display: none;">
+                <div class="popup-content">
+                    <span class="close" onclick="closePopup()">&times;</span>
+                    <form id="uploadForm">
+                        <h3>Create New Post</h3>
+                        <input type="text" id="title" placeholder="Title" required>
+                        <textarea id="description" placeholder="Description" required></textarea>
+                        <button type="submit">Submit</button>
+                    </form>
+                </div>
+            </div>
+            <div id="uploadedItems"></div>
+        </div>
     </template>
 
     <template id="registerTemplate">

@@ -13,8 +13,8 @@ const client = new MongoClient(connectionURI, {
 const database = client.db("cst2120");
 const collection = database.collection("users")
 
-async function find() {
-    const query = {"username": "Przemek"}; 
+async function find(username) {
+    const query = {"username": username}; 
     const results = await collection.find(query).toArray();
     if (results != "") {
         console.log("hi")
@@ -100,7 +100,6 @@ async function deleteMany() {
 
     await client.close();
 }
-
-insertOne()
+ deleteMany();
 //ITS FUCKING WORKING
 //KURWA
