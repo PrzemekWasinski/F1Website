@@ -347,6 +347,140 @@ app.delete(`/${studentID}/follow`, async (req, res) => {
     }
 });
 
+// Search endpoint
+app.get('/:studentid/content/search', async (req, res) => {
+    await client.connect();
+    try {
+        console.log('Search request received:', {
+            studentId: req.params.studentid,
+            query: req.query.q
+        });
+
+        const searchQuery = req.query.q;
+        
+        if (!searchQuery) {
+            return res.status(400).json({ error: 'Search query is required' });
+        }
+
+        console.log('Executing search with query:', searchQuery);
+
+        // Modified search query to be more specific and prevent duplicates
+        const posts = await postCollection.aggregate([
+            {
+                $match: {
+                    $text: { $search: searchQuery }
+                }
+            },
+            {
+                $addFields: {
+                    score: { $meta: "textScore" }
+                }
+            },
+            {
+                $match: {
+                    score: { $gt: 0.5 } // Adjust this threshold as needed
+                }
+            },
+            {
+                $sort: {
+                    score: { $meta: "textScore" }
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    title: { $first: "$title" },
+                    description: { $first: "$description" },
+                    username: { $first: "$username" },
+                    score: { $first: "$score" }
+                }
+            }
+        ]).toArray();
+
+        console.log(`Found ${posts.length} matching posts`);
+
+        res.json(posts);
+        await client.close();
+    } catch (error) {
+        console.error('Server error during search:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message 
+        });
+        await client.close();
+    }
+});
+
+// Make sure to create the text index when your server starts
+app.get('/:studentID/users/search', async (req, res) => {
+    await client.connect();
+    try {
+        const searchTerm = req.query.term;
+        const studentID = req.params.studentID;
+        
+        console.log('Search request received:', { studentID, searchTerm }); // Debug log
+
+        if (!searchTerm) {
+            console.log('No search term provided');
+            return res.status(400).json({ error: 'Search term is required' });
+        }
+
+        // Check if collection is accessible
+        if (!userCollection) {
+            console.error('User collection not accessible');
+            return res.status(500).json({ error: 'Database collection error' });
+        }
+
+        console.log('Attempting database query for term:', searchTerm);
+
+        const users = await userCollection.find({
+            username: { $regex: searchTerm, $options: 'i' }
+        }).project({
+            username: 1,
+            team: 1,
+            _id: 0
+        }).limit(10).toArray();
+
+        console.log('Search results:', users); // Debug log
+
+        res.json(users);
+        await client.close();
+    } catch (error) {
+        console.error('Detailed search error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            details: error.message 
+        });
+        await client.close();
+    }
+});
+
+app.get('/:studentID/users/:username/posts', async (req, res) => {
+    await client.connect();
+    try {
+        const username = req.params.username;
+        
+        const posts = await postCollection.find({ 
+            username: username 
+        }).sort({ 
+            timestamp: -1  // Sort by newest first
+        }).toArray();
+
+        res.json({
+            status: "success",
+            posts: posts
+        });
+        await client.close();
+    } catch (error) {
+        console.error('Error fetching user posts:', error);
+        res.status(500).json({
+            status: "error",
+            message: error.message
+        });
+        await client.close();
+    }
+});
+
 // Listen on port 8080
 app.listen(8080, () => {
     console.log("Express listening on port 8080");

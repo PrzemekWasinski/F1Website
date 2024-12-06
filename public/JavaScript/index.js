@@ -18,6 +18,176 @@ window.onload = async function() {
     loadContent("homeTemplate");
 };
 
+// Function to set up search functionality
+
+const userSearchInput = document.getElementById('userSearch');
+const userSearchButton = document.getElementById('userSearchButton');
+
+// Create a popup element for displaying search results
+const searchPopup = document.createElement('div');
+searchPopup.innerHTML = `
+    <div id="searchPopup" class="popup" style="display: none;">
+        <div class="popup-content">
+            <span class="close" onclick="closeSearchPopup()">&times;</span>
+            <h3>Search Results</h3>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+`;
+document.body.appendChild(searchPopup);
+
+userSearchButton.addEventListener('click', async () => {
+    const searchTerm = userSearchInput.value.trim();
+    if (searchTerm === '') return;
+
+    try {
+        const response = await fetch(`/${studentID}/users/search?term=${encodeURIComponent(searchTerm)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+
+        const users = await response.json();
+        displaySearchResults(users);
+    } catch (error) {
+        console.error('Error searching users:', error);
+        alert('Failed to search users');
+    }
+});
+
+// Function to display search results
+// Update the displaySearchResults function in index.js
+function displaySearchResults(users) {
+    const searchPopup = document.getElementById('searchPopup');
+    const searchResults = document.getElementById('searchResults');
+    
+    searchResults.innerHTML = `
+        <div class="search-header">
+            <button id="closeSearchButton" class="close-button">×</button>
+        </div>
+    `;
+    
+    if (users.length === 0) {
+        searchResults.innerHTML += '<p>No users found</p>';
+    } else {
+        users.forEach(user => {
+            const userDiv = document.createElement('div');
+            userDiv.className = 'user-result';
+            userDiv.innerHTML = `
+                <p><strong>Username:</strong> <a href="#" class="profile-link" onclick="loadProfile('${user.username}'); closeSearchPopup(); return false;">${user.username}</a></p>
+                <p><strong>Team:</strong> ${user.team}</p>
+            `;
+            searchResults.appendChild(userDiv);
+        });
+    }
+    
+    searchPopup.style.display = 'block';
+
+    // Add event listener for close button
+    document.getElementById('closeSearchButton').addEventListener('click', closeSearchPopup);
+}
+
+// Add this new function
+function closeSearchPopup() {
+    const searchPopup = document.getElementById('searchPopup');
+    searchPopup.style.display = 'none';
+}
+
+// Add this style to the existing style element
+style.textContent += `
+    .profile-link {
+        color: #2196F3;
+        text-decoration: none;
+    }
+
+    .profile-link:hover {
+        text-decoration: underline;
+        cursor: pointer;
+    }
+`;
+
+// Function to close the search popup
+function closeSearchPopup() {
+    document.getElementById('searchPopup').style.display = 'none';
+}
+
+// Close popup when clicking outside
+window.addEventListener('click', (event) => {
+    const searchPopup = document.getElementById('searchPopup');
+    if (event.target === searchPopup) {
+        searchPopup.style.display = 'none';
+    }
+});
+
+function setupSearchListener() {
+    const searchButton = document.getElementById('postSearchButton');
+    if (searchButton) {
+        searchButton.addEventListener('click', async function() {
+            const searchQuery = document.getElementById('postSearch').value.trim();
+            if (searchQuery) {
+                try {
+                    const response = await fetch(`http://localhost:8080/103600677/contents/search?q=${encodeURIComponent(searchQuery)}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Search failed');
+                    }
+
+                    const posts = await response.json();
+                    
+                    const postsContainer = document.getElementById('posts-container');
+                    postsContainer.innerHTML = ''; // Clear existing posts
+                    
+                    posts.forEach(post => {
+                        const postElement = document.createElement('div');
+                        postElement.className = 'post';
+                        postElement.innerHTML = `
+                            <h3>${post.title}</h3>
+                            <p>${post.description}</p>
+                            <div class="post-footer">
+                                <small>Posted by: 
+                                    <a href="#" class="username-link" data-username="${post.username}">
+                                        ${post.username}
+                                    </a>
+                                </small>
+                            </div>
+                        `;
+                        postsContainer.appendChild(postElement);
+                    });
+                } catch (error) {
+                    console.error('Error searching posts:', error);
+                }
+            }
+        });
+    }
+}
+
+// Call this function when loading the home template
+function loadHome() {
+    const template = document.getElementById('homeTemplate');
+    const content = document.getElementById('content');
+    
+    content.innerHTML = '';
+    const clone = template.content.cloneNode(true);
+    content.appendChild(clone);
+    
+    // Set up search listener after the template is loaded
+    setupSearchListener();
+    
+    // Rest of your loadHome function...
+}
+
+// If you have a router or navigation system, make sure to call loadHome() when navigating to the home page
+
 // Modified loadContent to ensure posts are loaded
 async function loadContent(templateId) {
     const contentDiv = document.getElementById("content");
@@ -41,6 +211,66 @@ async function loadContent(templateId) {
         if (uploadForm) {
             uploadForm.addEventListener("submit", handleUpload);
         }
+
+        // Set up search functionality
+        const searchButton = document.getElementById('postSearchButton');
+        if (searchButton) {
+            searchButton.addEventListener('click', async function() {
+                const searchQuery = document.getElementById('postSearch').value.trim();
+                const postsContainer = document.getElementById('posts-container'); // Make sure this matches your div ID
+                const uploadsContainer = document.getElementById("posts-container");
+
+                postsContainer.innerHTML = '';
+                uploadsContainer.innerHTML = "";
+                if (searchQuery) {
+                    try {
+                        const response = await fetch(`http://localhost:8080/${studentID}/content/search?q=${encodeURIComponent(searchQuery)}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Search failed with status ${response.status}`);
+                        }
+
+                        const posts = await response.json();
+                        
+                        // Clear existing posts and only show search results
+                        
+                        
+                        if (posts.length === 0) {
+                            postsContainer.innerHTML = '<p>No posts found matching your search.</p>';
+                            return;
+                        }
+                        
+                        posts.forEach(post => {
+                            const postElement = document.createElement('div');
+                            postElement.className = 'post';
+                            postElement.innerHTML = 
+                            `<h3>${post.title}</h3>
+                            <p>${post.description}</p>
+                            <div class="post-footer">
+                                <small>Posted by: 
+                                    <a href="#" class="username-link" data-username="${post.username}">
+                                        ${post.username}
+                                    </a>
+                                </small>
+                            </div>
+                        `;
+                            postsContainer.appendChild(postElement);
+                        });
+                    } catch (error) {
+                        console.error('Error searching posts:', error);
+                        postsContainer.innerHTML = '<p>Error searching posts. Please try again.</p>';
+                    }
+                } else {
+                    // If search is empty, reload all posts
+                    loadPosts();
+                }
+            });
+        }
     }
 }
 
@@ -60,7 +290,7 @@ async function loadPosts() {
 
 // Function to display posts
 async function displayPosts(posts) {
-    const uploadedItems = document.getElementById("uploadedItems");
+    const uploadedItems = document.getElementById("posts-container");
     if (!uploadedItems) return;
     
     uploadedItems.innerHTML = "";
@@ -101,30 +331,64 @@ async function loadProfile(username) {
     let isFollowing = false;
     
     try {
-        const response = await fetch(`/${studentID}/following`, {
+        // Fetch following status
+        const followingResponse = await fetch(`/${studentID}/following`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json"
             }
         });
 
-        const result = await response.json();
-        for (let i = 0; i < result.following.length; i++) {
-            if (result.following[i] == username) {
-                buttonText = "Unfollow";
-                isFollowing = true;
-            }
+        const followingResult = await followingResponse.json();
+        
+        if (followingResult.following && followingResult.following.length > 0) {
+            isFollowing = followingResult.following.includes(username);
+            buttonText = isFollowing ? "Unfollow" : "Follow";
         }
 
+        // Fetch user's posts
+        const postsResponse = await fetch(`/${studentID}/users/${username}/posts`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        const postsResult = await postsResponse.json();
+        
+        // Debug log to see the structure
+        console.log('Posts result:', postsResult);
+
+        // Check if posts exist in the response
+        const posts = postsResult.posts || [];
+
+        const postsHTML = posts.map(post => `
+            <div class="post">
+                <div class="post-details">
+                    <span class="post-username">${post.username}</span>
+                    <br>
+                    <span class="post-description">${post.title}</span>
+                    <br>
+                    <span class="post-description">${post.description}</span>
+                </div>
+            </div>
+        `).join('');
+
         const profileTemplate = document.getElementById("profileTemplate");
-        profileTemplate.innerHTML = 
-        `
-        <p>${username}</p>
-        <button id="followButton">${buttonText}</button>
+        profileTemplate.innerHTML = `
+            <div class="profile-header">
+                <h2>${username}'s Profile</h2>
+                <button id="followButton">${buttonText}</button>
+            </div>
+            <div class="posts-section">
+                <h3>Posts</h3>
+                ${posts.length > 0 ? postsHTML : '<p>No posts yet.</p>'}
+            </div>
         `;
 
         loadContent("profileTemplate");
 
+        // Set up follow button functionality
         setTimeout(() => {
             const followButton = document.getElementById("followButton");
             if (followButton) {
@@ -143,7 +407,8 @@ async function loadProfile(username) {
         }, 0);
 
     } catch (error) {
-        console.log(error);
+        console.error('Profile loading error:', error);
+        console.log('Error details:', error.message);
     }
 }
 
@@ -399,3 +664,5 @@ function applyTheme(team) {
             navBar.style.backgroundColor = "#333";
     }
 };
+
+

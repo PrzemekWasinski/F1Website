@@ -8,6 +8,7 @@
 </head>
 <body>
     <div id="navBar">
+        <input id="userSearch" placeholder="Search for users..."> <button id="userSearchButton">Search</button>
         <button id="homePageButton">Home</button>
         <button id="registerPageButton">Register</button>
         <button id="loginPageButton">Login</button>
@@ -17,6 +18,7 @@
     <template id="homeTemplate">
         <div class="home-content">
             <h2>Home Page</h2>
+            <input id="postSearch" placeholder="Search for posts..."> <button id="postSearchButton">Search</button>
             <button onclick="upload()" id="uploadButton" style="display: none">Upload Post</button>
             
             <div id="uploadPopup" class="popup" style="display: none;">

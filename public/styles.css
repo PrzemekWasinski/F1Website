@@ -92,9 +92,28 @@ input[type="text"], input[type="password"] {
 .close {
     float: right;
     cursor: pointer;
-    font-size: 24px;
+    font-size: 24px;
 }
 
+
+.search-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 5px;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0 5px;
+}
+
+.close-button:hover {
+    color: #000;
+}
 
 
 .profile-container {
