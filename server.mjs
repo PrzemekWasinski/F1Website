@@ -87,58 +87,61 @@ async function createPost(postData) {
     await client.close();
 }
 
-async function isFollowing(user) {
-    await client.connect();
-
-    const query = { username: req.session.user.username };
-
-}
+//Add the creator to the user's following array
 async function followUser(user, req) {
+    if (!req.session.user) {
+        throw new Error("User not authenticated");
+    }
+
+    // Check if user is trying to follow themselves
+    if (user === req.session.user.username) {
+        throw new Error("You cannot follow yourself");
+    }
+
     await client.connect();
     const query = { username: req.session.user.username };
     
-    const results = await userCollection.find(query).toArray();
-    const newFollows = results[0]["follows"];
-    newFollows.push(user);
-
-    const updateDoc = {$set: {follows: newFollows}};
-    const updateResults = await userCollection.updateOne(query, updateDoc);
-    console.log(updateResults);
-
-    await client.close();
-}
-
-// Update the endpoint to pass the session:
-app.post(`/${studentID}/follow`, async (req, res) => {
-    try {
-        const result = await followUser(req.body.user, req);
-        res.json({
-            status: "success",
-            message: "Successfully followed user"
-        });
-    } catch (error) {
-        res.status(400).json({
-            status: "error",
-            message: error.message
-        });
+    const currentUser = await userCollection.findOne(query);
+    if (!currentUser) {
+        await client.close();
+        throw new Error("User not found");
     }
-});
 
-async function unfollowUser(user) {
-    await client.connect();
-    const query = { username: req.session.user.username }
+    const newFollows = currentUser.follows || [];
+    if (!newFollows.includes(user)) {
+        newFollows.push(user);
+        const updateDoc = {$set: {follows: newFollows}};
+        const updateResults = await userCollection.updateOne(query, updateDoc);
+        console.log('Follow update results:', updateResults);
+    }
     
-    const results = await userCollection.find(query).toArray();
-    const newFollows = results[0]["follows"];
-    newFollows.filter(e => e !== user); //Remove user from follow array
-
-    const updateDoc = {$set: {follows: newFollows}};
-    const updateResults = await userCollection.updateOne(query, updateDoc);
-    console.log(updateResults)
-
-    await client.close()
+    await client.close();
+    return "Successfully followed user";
 }
 
+async function unfollowUser(user, req) {
+    if (!req.session.user) {
+        throw new Error("User not authenticated");
+    }
+
+    await client.connect();
+    const query = { username: req.session.user.username };
+    
+    const currentUser = await userCollection.findOne(query);
+    if (!currentUser) {
+        await client.close();
+        throw new Error("User not found");
+    }
+
+    const newFollows = (currentUser.follows || []).filter(username => username !== user);
+    
+    const updateDoc = {$set: {follows: newFollows}};
+    const updateResults = await userCollection.updateOne(query, updateDoc);
+    console.log('Unfollow update results:', updateResults);
+    
+    await client.close();
+    return "Successfully unfollowed user";
+}
 
 // Loading the page
 app.get("/", (req, res) => {
@@ -236,7 +239,7 @@ app.post(`/${studentID}/users`, async (req, res) => {
     }
 });
 
-//UPLOADS>?>?>?>?>?>????????????????????????????????????????????????????????????????
+//UPLOADS????????????????????????????????????????????????????????????????????
 app.get(`/${studentID}/contents`, async (req, res) => {
     try {
         const posts = await getAllPosts();
@@ -263,15 +266,86 @@ app.post(`/${studentID}/contents`, async (req, res) => {
     }
 });
 
-//FOLLLLOOOOOWOSOSOSOSOSSO"SWOWOSOWSOWOWOOSOWSOWOSOWOSOSS
+//Get follow requests and follow the correct user
+app.get(`/${studentID}/following`, async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({
+                status: "error",
+                message: "User not authenticated"
+            });
+        }
+
+        await client.connect();
+        const query = { username: req.session.user.username };
+        const results = await userCollection.findOne(query);
+        
+        if (!results) {
+            await client.close();
+            return res.status(404).json({
+                status: "error",
+                message: "User not found"
+            });
+        }
+
+        await client.close();
+        res.json({
+            status: "success",
+            following: results.follows || []
+        });
+    } catch (error) {
+        console.error('Error in following route:', error);
+        res.status(500).json({
+            status: "error",
+            message: error.message
+        });
+    }
+});
+
 app.post(`/${studentID}/follow`, async (req, res) => {
     try {
-        await followUser(req.body.user)
-        res.send({"message": "Check"})
+        if (!req.session.user) {
+            return res.status(401).json({
+                status: "error",
+                message: "User not authenticated"
+            });
+        }
+
+        const result = await followUser(req.body.user, req);
+        console.log(result)
+        res.json({
+            status: "success",
+            message: "Successfully followed user"
+        });
     } catch (error) {
-        res.send({"message": error})
+        res.status(400).json({
+            status: "error",
+            message: error.message
+        });
     }
-})
+});
+
+app.delete(`/${studentID}/follow`, async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({
+                status: "error",
+                message: "User not authenticated"
+            });
+        }
+
+        const result = await unfollowUser(req.body.user, req);
+        res.json({
+            status: "success",
+            message: "Successfully unfollowed user"
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: "error",
+            message: error.message
+        });
+    }
+});
 
 // Listen on port 8080
 app.listen(8080, () => {

@@ -70,25 +70,81 @@ async function displayPosts(posts) {
         return;
     }
 
-    // Sort posts by timestamp, newest first
     posts.forEach(post => {
+        const postElement = document.createElement('div');
+        postElement.className = 'post';
+        postElement.innerHTML = `
+            <h3>${post.title}</h3>
+            <p>${post.description}</p>
+            <div class="post-footer">
+                <small>Posted by: 
+                    <a href="#" class="username-link" data-username="${post.username}">
+                        ${post.username}
+                    </a>
+                </small>
+            </div>
+        `;
 
-        try {
+        // Add click event listener to username link
+        const usernameLink = postElement.querySelector('.username-link');
+        usernameLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadProfile(post.username);
+        });
 
-            const postElement = document.createElement('div');
-            postElement.className = 'post';
-            postElement.innerHTML = `
-                <h3>${post.title}</h3>
-                <p>${post.description}</p>
-                <div class="post-footer">
-                    <small>Posted by: ${post.username}</small> <button onclick="followUser('${post.username}')">Follow</button>
-                </div>
-            `;
-            uploadedItems.appendChild(postElement);
-        } catch (error) {
-            console.log(error)
-        }
+        uploadedItems.appendChild(postElement);
     });
+}
+
+async function loadProfile(username) {
+    let buttonText = "Follow";
+    let isFollowing = false;
+    
+    try {
+        const response = await fetch(`/${studentID}/following`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        const result = await response.json();
+        for (let i = 0; i < result.following.length; i++) {
+            if (result.following[i] == username) {
+                buttonText = "Unfollow";
+                isFollowing = true;
+            }
+        }
+
+        const profileTemplate = document.getElementById("profileTemplate");
+        profileTemplate.innerHTML = 
+        `
+        <p>${username}</p>
+        <button id="followButton">${buttonText}</button>
+        `;
+
+        loadContent("profileTemplate");
+
+        setTimeout(() => {
+            const followButton = document.getElementById("followButton");
+            if (followButton) {
+                followButton.addEventListener("click", async () => {
+                    if (isFollowing) {
+                        await unfollowUser(username);
+                        followButton.textContent = "Follow";
+                        isFollowing = false;
+                    } else {
+                        await followUser(username);
+                        followButton.textContent = "Unfollow";
+                        isFollowing = true;
+                    }
+                });
+            }
+        }, 0);
+
+    } catch (error) {
+        console.log(error);
+    }
 }
 
 function upload() {
@@ -125,6 +181,7 @@ async function handleUpload(e) {
     }
 }
 
+//When user presses follow in the displayPosts function
 async function followUser(username) {
     try {
         const response = await fetch(`/${studentID}/follow`, {
@@ -132,15 +189,32 @@ async function followUser(username) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ 
-                "user": username
-             })
+            body: JSON.stringify({ user: username })  // Changed from username to user
         });
-
-        const result = await response.json();
-        console.log(`${result}: from followUser() (index.js)`)
+        
+        if (!response.ok) {
+            throw new Error('Failed to follow user');
+        }
     } catch (error) {
-        console.log(`${error}: from followUser() (index.js)`)
+        console.log(error);
+    }
+}
+
+async function unfollowUser(username) {
+    try {
+        const response = await fetch(`/${studentID}/follow`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ user: username })  // Changed from username to user
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to unfollow user');
+        }
+    } catch (error) {
+        console.log(error);
     }
 }
 

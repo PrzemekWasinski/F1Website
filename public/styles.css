@@ -94,3 +94,66 @@ input[type="text"], input[type="password"] {
     cursor: pointer;
     font-size: 24px;
 }
+
+
+
+.profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.profile-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+#followButton {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #0095f6;
+    color: white;
+    font-weight: bold;
+}
+
+#followButton.following {
+    background-color: #efefef;
+    color: #262626;
+}
+
+.post {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+#userPosts {
+    margin-top: 20px;
+}
+
+.post-footer {
+    margin-top: 10px;
+    color: #666;
+}
