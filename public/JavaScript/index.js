@@ -6,12 +6,25 @@ window.onload = async function() {
     loadContent("homeTemplate");
 };
 
-// Navigation button event listeners
-document.getElementById("homePageButton").addEventListener("click", () => loadContent("homeTemplate"));
-document.getElementById("registerPageButton").addEventListener("click", () => loadContent("registerTemplate"));
-document.getElementById("loginPageButton").addEventListener("click", () => loadContent("loginTemplate"));
-document.getElementById("seasonsButton").addEventListener("click", () => loadSeasonsTemplate());
-document.getElementById("logOutButton").addEventListener("click", logOut);
+document.getElementById("homePageButton").addEventListener("click", function() {
+    loadContent("homeTemplate"), setupSearchListener()
+});
+
+document.getElementById("registerPageButton").addEventListener("click", function() {
+    loadContent("registerTemplate")
+});
+
+document.getElementById("loginPageButton").addEventListener("click", function() {
+    loadContent("loginTemplate");
+});
+
+document.getElementById("seasonsButton").addEventListener("click", function() {
+    loadSeasonsTemplate();
+});
+
+document.getElementById("logOutButton").addEventListener("click", function() {
+    logOut()
+});
 
 // Modify window.onload to load posts
 window.onload = async function() {
@@ -19,17 +32,30 @@ window.onload = async function() {
     loadContent("homeTemplate");
 };
 
+const teamColours = {
+    "Red Bull": "#090085",
+    "Ferrari" : "#d90000",
+    "McLaren": "#d95a00",
+    "Mercedes": "#00d6c4",
+    "Aston Martin": "#00472a",
+    "Alpine F1 Team": "#ff36d3",
+    "Haas F1 Team": "#d6d6d6",
+    "RB F1 Team": "#0b00d4",
+    "Williams": "#0051ff",
+    "Sauber": "#02d610"
+}
+
 async function getSeasonResults(year) {
     const driversArray = [];
     const constructorsArray = [];
 
-    const baseUrl = `https://ergast.com/api/f1/${year}`;
+    const api = `https://ergast.com/api/f1/${year}`;
 
     try {
-        const driverResponse = await fetch(`${baseUrl}/driverStandings.json`);
+        const driverResponse = await fetch(`${api}/driverStandings.json`);
         const driverData = await driverResponse.json();
 
-        const constructorResponse = await fetch(`${baseUrl}/constructorStandings.json`);
+        const constructorResponse = await fetch(`${api}/constructorStandings.json`);
         const constructorData = await constructorResponse.json();
 
 
@@ -69,18 +95,6 @@ async function getSeasonResults(year) {
 }
 
 function loadSeasonsTemplate() {
-    const teamColours = {
-        "Red Bull": "#090085",
-        "Ferrari" : "#d90000",
-        "McLaren": "#d95a00",
-        "Mercedes": "#00d6c4",
-        "Aston Martin": "#00472a",
-        "Alpine F1 Team": "#ff36d3",
-        "Haas F1 Team": "#d6d6d6",
-        "RB F1 Team": "#0b00d4",
-        "Williams": "#0051ff",
-        "Sauber": "#02d610"
-    }
     
     const date = new Date();
     let currentYear = date.getFullYear();
@@ -213,10 +227,10 @@ function loadSeasonsTemplate() {
     }
 }
 
-const userSearchInput = document.getElementById('userSearch');
-const userSearchButton = document.getElementById('userSearchButton');
+const userSearchInput = document.getElementById("userSearch");
+const userSearchButton = document.getElementById("userSearchButton");
 
-const searchPopup = document.createElement('div');
+const searchPopup = document.createElement("div");
 searchPopup.innerHTML = `
     <div id="searchPopup" class="popup" style="display: none;">
         <div class="popup-content">
@@ -228,33 +242,28 @@ searchPopup.innerHTML = `
 `;
 document.body.appendChild(searchPopup);
 
-userSearchButton.addEventListener('click', async () => {
+userSearchButton.addEventListener("click", async () => {
     const searchTerm = userSearchInput.value.trim();
-    if (searchTerm === '') return;
+    if (searchTerm === "") return;
 
     try {
         const response = await fetch(`/${studentID}/users/search?term=${encodeURIComponent(searchTerm)}`, {
-            method: 'GET',
+            method: "GET",
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json"
             }
         });
-
-        if (!response.ok) {
-            throw new Error('Search failed');
-        }
 
         const users = await response.json();
         displaySearchResults(users);
     } catch (error) {
-        console.error('Error searching users:', error);
-        alert('Failed to search users');
+        console.error(`${error} from: User search GET`);
     }
 });
 
 function displaySearchResults(users) {
-    const searchPopup = document.getElementById('searchPopup');
-    const searchResults = document.getElementById('searchResults');
+    const searchPopup = document.getElementById("searchPopup");
+    const searchResults = document.getElementById("searchResults");
     
     searchResults.innerHTML = `
         <div class="search-header">
@@ -263,11 +272,11 @@ function displaySearchResults(users) {
     `;
     
     if (users.length === 0) {
-        searchResults.innerHTML += '<p>No users found</p>';
+        searchResults.innerHTML += "<p>No users found</p>";
     } else {
         users.forEach(user => {
-            const userDiv = document.createElement('div');
-            userDiv.className = 'user-result';
+            const userDiv = document.createElement("div");
+            userDiv.className = "user-result";
             userDiv.innerHTML = `
                 <p><strong>Username:</strong> <a href="#" class="profile-link" onclick="loadProfile('${user.username}'); closeSearchPopup(); return false;">${user.username}</a></p>
                 <p><strong>Team:</strong> ${user.team}</p>
@@ -276,45 +285,37 @@ function displaySearchResults(users) {
         });
     }
     
-    searchPopup.style.display = 'block';
-    document.getElementById('closeSearchButton').addEventListener('click', closeSearchPopup);
+    searchPopup.style.display = "block";
+    document.getElementById("closeSearchButton").addEventListener("click", closeSearchPopup);
 }
 
 function closeSearchPopup() {
-    const searchPopup = document.getElementById('searchPopup');
-    searchPopup.style.display = 'none';
-}
-
-function closeSearchPopup() {
-    document.getElementById('searchPopup').style.display = 'none';
+    document.getElementById("searchPopup").style.display = "none";
 }
 
 function setupSearchListener() {
-    const searchButton = document.getElementById('postSearchButton');
+    const searchButton = document.getElementById("postSearchButton");
     if (searchButton) {
-        searchButton.addEventListener('click', async function() {
-            const searchQuery = document.getElementById('postSearch').value.trim();
+        searchButton.addEventListener("click", async function() {
+            const searchQuery = document.getElementById("postSearch").value.trim();
             if (searchQuery) {
                 try {
-                    const response = await fetch(`http://localhost:8080/103600677/contents/search?q=${encodeURIComponent(searchQuery)}`, {
-                        method: 'GET',
+                    const response = await fetch(`/${studentID}/contents/search?q=${encodeURIComponent(searchQuery)}`, {
+                        method: "GET",
                         headers: {
-                            'Content-Type': 'application/json'
+                            "Content-Type": "application/json"
                         }
                     });
 
-                    if (!response.ok) {
-                        throw new Error('Search failed');
-                    }
-
                     const posts = await response.json();
                     
-                    const postsContainer = document.getElementById('posts-container');
-                    postsContainer.innerHTML = ''; // Clear existing posts
+                    const postsContainer = document.getElementById("posts-container");
+                    postsContainer.innerHTML = ""; 
                     
-                    posts.forEach(post => {
-                        const postElement = document.createElement('div');
-                        postElement.className = 'post';
+                    for (let i = 0; i < posts.length; i++) {
+                        const post = posts[i];
+                        const postElement = document.createElement("div");
+                        postElement.className = "post";
                         postElement.innerHTML = `
                             <h3>${post.title}</h3>
                             <p>${post.description}</p>
@@ -327,25 +328,22 @@ function setupSearchListener() {
                             </div>
                         `;
                         postsContainer.appendChild(postElement);
-                    });
+                    }                    
+
                 } catch (error) {
-                    console.error('Error searching posts:', error);
+                    console.log(`${error} from setupsSearchEventListener()`)
                 }
             }
         });
     }
 }
 
-function loadHome() {
-    const template = document.getElementById('homeTemplate');
-    const content = document.getElementById('content');
-    
-    content.innerHTML = '';
-    const clone = template.content.cloneNode(true);
-    content.appendChild(clone);
+function upload() {
+    document.getElementById("uploadPopup").style.display = "block";
+}
 
-    setupSearchListener();
-
+function closePopup() {
+    document.getElementById("uploadPopup").style.display = "none";
 }
 
 async function loadContent(templateId) {
@@ -372,41 +370,34 @@ async function loadContent(templateId) {
         }
 
         // Set up search functionality
-        const searchButton = document.getElementById('postSearchButton');
+        const searchButton = document.getElementById("postSearchButton");
         if (searchButton) {
-            searchButton.addEventListener('click', async function() {
-                const searchQuery = document.getElementById('postSearch').value.trim();
-                const postsContainer = document.getElementById('posts-container'); // Make sure this matches your div ID
+            searchButton.addEventListener("click", async function() {
+                const searchQuery = document.getElementById("postSearch").value.trim();
+                const postsContainer = document.getElementById("posts-container"); // Make sure this matches your div ID
                 const uploadsContainer = document.getElementById("posts-container");
 
-                postsContainer.innerHTML = '';
+                postsContainer.innerHTML = "";
                 uploadsContainer.innerHTML = "";
                 if (searchQuery) {
                     try {
-                        const response = await fetch(`http://localhost:8080/${studentID}/content/search?q=${encodeURIComponent(searchQuery)}`, {
-                            method: 'GET',
+                        const response = await fetch(`/${studentID}/contents/search?q=${encodeURIComponent(searchQuery)}`, {
+                            method: "GET",
                             headers: {
-                                'Content-Type': 'application/json'
+                                "Content-Type": "application/json"
                             }
                         });
 
-                        if (!response.ok) {
-                            throw new Error(`Search failed with status ${response.status}`);
-                        }
-
                         const posts = await response.json();
-                        
-                        // Clear existing posts and only show search results
-                        
-                        
+                                               
                         if (posts.length === 0) {
-                            postsContainer.innerHTML = '<p>No posts found matching your search.</p>';
+                            postsContainer.innerHTML = "<p>No posts found matching your search.</p>";
                             return;
                         }
                         
                         posts.forEach(post => {
-                            const postElement = document.createElement('div');
-                            postElement.className = 'post';
+                            const postElement = document.createElement("div");
+                            postElement.className = "post";
                             postElement.innerHTML = 
                             `<h3>${post.title}</h3>
                             <p>${post.description}</p>
@@ -421,8 +412,8 @@ async function loadContent(templateId) {
                             postsContainer.appendChild(postElement);
                         });
                     } catch (error) {
-                        console.error('Error searching posts:', error);
-                        postsContainer.innerHTML = '<p>Error searching posts. Please try again.</p>';
+                        console.log(`${error} from loadContent()`)
+                        postsContainer.innerHTML = "<p>Error searching posts. Please try again.</p>";
                     }
                 } else {
                     // If search is empty, reload all posts
@@ -434,34 +425,40 @@ async function loadContent(templateId) {
 }
 
 // Function to load posts
-async function loadPosts() {
+async function loadPosts(searchQuery) {
     try {
-        const response = await fetch(`/${studentID}/contents`);
-        if (!response.ok) {
-            throw new `Error(HTTP error! status: ${response.status})`;
-        }
+        const response = await fetch(`/${studentID}/contents`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
         const posts = await response.json();
         displayPosts(posts);
     } catch (error) {
-        console.log(`Error loading posts: ${error}`);
+        console.log(`${error} from: loadPosts()`);
     }
 }
+
 
 // Function to display posts
 async function displayPosts(posts) {
     const uploadedItems = document.getElementById("posts-container");
-    if (!uploadedItems) return;
+    if (!uploadedItems) {
+        return;
+    }
     
     uploadedItems.innerHTML = "";
     
     if (posts.length === 0) {
-        uploadedItems.innerHTML = '<p>No posts yet!</p>';
+        uploadedItems.innerHTML = "<p>No posts yet!</p>";
         return;
     }
 
     posts.forEach(post => {
-        const postElement = document.createElement('div');
-        postElement.className = 'post';
+        const postElement = document.createElement("div");
+        postElement.className = "post";
         postElement.innerHTML = `
             <h3>${post.title}</h3>
             <p>${post.description}</p>
@@ -475,9 +472,9 @@ async function displayPosts(posts) {
         `;
 
         // Add click event listener to username link
-        const usernameLink = postElement.querySelector('.username-link');
-        usernameLink.addEventListener('click', (e) => {
-            e.preventDefault();
+        const usernameLink = postElement.querySelector(".username-link");
+        usernameLink.addEventListener("click", (event) => {
+            event.preventDefault();
             loadProfile(post.username);
         });
 
@@ -491,7 +488,7 @@ async function loadProfile(username) {
     
     try {
         // Fetch following status
-        const followingResponse = await fetch(`/${studentID}/following`, {
+        const followingResponse = await fetch(`/${studentID}/follow/:${username}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json"
@@ -501,8 +498,11 @@ async function loadProfile(username) {
         const followingResult = await followingResponse.json();
         
         if (followingResult.following && followingResult.following.length > 0) {
-            isFollowing = followingResult.following.includes(username);
-            buttonText = isFollowing ? "Unfollow" : "Follow";
+            if (followingResult["following"].includes(username)) {
+                buttonText = "Unfollow";
+            } else {
+                buttonText = "Follow";
+            }
         }
 
         // Fetch user's posts
@@ -516,22 +516,32 @@ async function loadProfile(username) {
         const postsResult = await postsResponse.json();
         
         // Debug log to see the structure
-        console.log('Posts result:', postsResult);
+        console.log("Profile posts result:", postsResult);
 
         // Check if posts exist in the response
-        const posts = postsResult.posts || [];
+        let posts;
+        if (postsResult.posts) {
+            posts = postsResult.posts;
+        } else {
+            posts = [];
+        }
 
-        const postsHTML = posts.map(post => `
-            <div class="post">
-                <div class="post-details">
-                    <span class="post-username">${post.username}</span>
-                    <br>
-                    <span class="post-description">${post.title}</span>
-                    <br>
-                    <span class="post-description">${post.description}</span>
+        let postsHTML = "";
+        for (let i = 0; i < posts.length; i++) {
+            const post = posts[i];
+            postsHTML += `
+                <div class="post">
+                    <div class="post-details">
+                        <span class="post-username">${post.username}</span>
+                        <br>
+                        <span class="post-description">${post.title}</span>
+                        <br>
+                        <span class="post-description">${post.description}</span>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }
+
 
         const profileTemplate = document.getElementById("profileTemplate");
         profileTemplate.innerHTML = `
@@ -541,46 +551,37 @@ async function loadProfile(username) {
             </div>
             <div class="posts-section">
                 <h3>Posts</h3>
-                ${posts.length > 0 ? postsHTML : '<p>No posts yet.</p>'}
+                ${posts.length > 0 ? postsHTML : "<p>No posts yet.</p>"}
             </div>
         `;
 
         loadContent("profileTemplate");
 
         // Set up follow button functionality
-        setTimeout(() => {
-            const followButton = document.getElementById("followButton");
-            if (followButton) {
-                followButton.addEventListener("click", async () => {
-                    if (isFollowing) {
-                        await unfollowUser(username);
-                        followButton.textContent = "Follow";
-                        isFollowing = false;
-                    } else {
-                        await followUser(username);
-                        followButton.textContent = "Unfollow";
-                        isFollowing = true;
-                    }
-                });
-            }
-        }, 0);
+        const followButton = document.getElementById("followButton");
+
+        if (followButton) {
+            followButton.addEventListener("click", async () => {
+                if (isFollowing) {
+                    await unfollowUser(username);
+                    followButton.textContent = "Follow";
+                    isFollowing = false;
+                } else {
+                    await followUser(username);
+                    followButton.textContent = "Unfollow";
+                    isFollowing = true;
+                }
+            });
+        }
+
 
     } catch (error) {
-        console.error('Profile loading error:', error);
-        console.log('Error details:', error.message);
+        console.log(`${error} from: loadProfile()`);
     }
 }
 
-function upload() {
-    document.getElementById("uploadPopup").style.display = "block";
-}
-
-function closePopup() {
-    document.getElementById("uploadPopup").style.display = "none";
-}
-
-async function handleUpload(e) {
-    e.preventDefault();
+async function handleUpload(event) {
+    event.preventDefault();
     const title = document.getElementById("title").value;
     const description = document.getElementById("description").value;
 
@@ -594,14 +595,14 @@ async function handleUpload(e) {
         });
         const result = await response.json();
         if (response.ok) {
-            closePopup();
+            document.getElementById("uploadPopup").style.display = "none";
             await loadPosts();
             document.getElementById("uploadForm").reset();
         } else {
             console.log(result.message);
         }
     } catch (error) {
-        console.log(`Error creating post: ${error}`);
+        console.log(`${error} from: handleUpload()`);
     }
 }
 
@@ -613,14 +614,14 @@ async function followUser(username) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ user: username })  // Changed from username to user
+            body: JSON.stringify({ user: username }) 
         });
-        
-        if (!response.ok) {
-            throw new Error('Failed to follow user');
-        }
+
+        const result = await response.json();
+        console.log(`${result} from: followUser()`)
+
     } catch (error) {
-        console.log(error);
+        console.log(`${error} from: followUser()`);
     }
 }
 
@@ -633,10 +634,10 @@ async function unfollowUser(username) {
             },
             body: JSON.stringify({ user: username })  // Changed from username to user
         });
-        
-        if (!response.ok) {
-            throw new Error('Failed to unfollow user');
-        }
+
+        const result = await response.json();
+        console.log(`${result} from: unfollowUser()`)
+
     } catch (error) {
         console.log(error);
     }
@@ -646,7 +647,7 @@ async function register() {
     const registerUsername = document.getElementById("registerUsername").value;
     const registerPassword = document.getElementById("registerPassword").value;
     const confirmPassword = document.getElementById("confirmPassword").value;
-    const teamSelection = document.querySelector('input[name="team"]:checked');
+    const teamSelection = document.querySelector("input[name='team']:checked");
 
     if (!registerUsername || !registerPassword || !confirmPassword || !teamSelection) {
         console.log("All fields must be filled!");
@@ -675,10 +676,10 @@ async function register() {
         });
 
         const result = await response.json();
-        console.log("Register attempt:", result.message);
+        console.log(`${result} from: register()`);
 
     } catch (error) {
-        console.log(`${error} (from sending register request)`);
+        console.log(`${error} from: register()`);
     }
 }
 
@@ -720,25 +721,25 @@ async function login() {
 
             if (loginResult.status === "success") {
                 applyTheme(loginResult["team"]);
-                localStorage.setItem('userTeam', loginResult["team"]);
+                localStorage.setItem("userTeam", loginResult["team"]);
                 console.log("Login successful!");
                 loadContent("homeTemplate");
             } else {
-                console.log("Login failed:", loginResult.message);
+                console.log(`${loginResult} from: login()`);
             }
         } else {
             console.log("Log out first")
         }
 
     } catch (error) {
-        console.log(`${error} (from sending login request)`);
+        console.log(`${error} from: login()`);
     }
 }
 
 async function logOut() {
     const navBar = document.getElementById("navBar");
     navBar.style.backgroundColor = "#333";
-    localStorage.removeItem('userTeam');
+    localStorage.removeItem("userTeam");
 
     try {
         const response = await fetch(`/${studentID}/login`, {
@@ -753,7 +754,7 @@ async function logOut() {
         loadContent("homeTemplate");
 
     } catch (error) {
-        console.log(`${error} (from sending logout request)`);
+        console.log(`${error} from: logOut()`);
     }
 }
 
@@ -778,49 +779,20 @@ async function checkLoginStatus() {
 
             return result
         } else {
-            console.log("No user is currently logged in");
+            console.log("No user is logged in");
         }
     } catch (error) {
-        console.log(`${error} (from checking login status)`);
+        console.log(`${error} from: checkLoginStatus()`);
     }
 }
 
 function applyTheme(team) {
     const navBar = document.getElementById("navBar");
 
-    switch (team) {
-        case "Red Bull":
-            navBar.style.backgroundColor = "#1E41FF";
-            break;
-        case "Ferrari":
-            navBar.style.backgroundColor = "#DC0000";
-            break;
-        case "McLaren":
-            navBar.style.backgroundColor = "#FF8700";
-            break;
-        case "Mercedes":
-            navBar.style.backgroundColor = "#00D2BE";
-            break;
-        case "Aston Martin":
-            navBar.style.backgroundColor = "#006F62";
-            break;
-        case "Alpine":
-            navBar.style.backgroundColor = "#0090FF";
-            break;
-        case "Haas":
-            navBar.style.backgroundColor = "#FFFFFF";
-            break;
-        case "RB":
-            navBar.style.backgroundColor = "#1E41FF";
-            break;
-        case "Williams":
-            navBar.style.backgroundColor = "#005AFF";
-            break;
-        case "Sauber":
-            navBar.style.backgroundColor = "#00D2BE";
-            break;
-        default:
-            navBar.style.backgroundColor = "#333";
+    if (team in teamColours) {
+        navBar.style.backgroundColor = teamColours[team];
+    } else {
+        navBar.style.backgroundColor = "#333";
     }
 };
 

@@ -5,13 +5,12 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import session from "express-session";
 
 const fileName = "server.mjs";
-
 const studentID = "M00931085";
 //App
 const app = express();
 
 app.use(session({
-    secret: "przemek",
+    secret: "cookie",
     resave: false,
     saveUninitialized: false,
     cookie: { 
@@ -87,15 +86,14 @@ async function createPost(postData) {
     await client.close();
 }
 
-//Add the creator to the user's following array
 async function followUser(user, req) {
     if (!req.session.user) {
-        throw new Error("User not authenticated");
+        console.log("User error from: followUser()")
     }
 
     // Check if user is trying to follow themselves
     if (user === req.session.user.username) {
-        throw new Error("You cannot follow yourself");
+        console.log("You cannot follow yourself")
     }
 
     await client.connect();
@@ -104,7 +102,7 @@ async function followUser(user, req) {
     const currentUser = await userCollection.findOne(query);
     if (!currentUser) {
         await client.close();
-        throw new Error("User not found");
+        console.log("User not found")
     }
 
     const newFollows = currentUser.follows || [];
@@ -112,7 +110,7 @@ async function followUser(user, req) {
         newFollows.push(user);
         const updateDoc = {$set: {follows: newFollows}};
         const updateResults = await userCollection.updateOne(query, updateDoc);
-        console.log('Follow update results:', updateResults);
+        console.log("Follow update results:", updateResults);
     }
     
     await client.close();
@@ -121,7 +119,7 @@ async function followUser(user, req) {
 
 async function unfollowUser(user, req) {
     if (!req.session.user) {
-        throw new Error("User not authenticated");
+        console.log("User error from unfollowUser()")
     }
 
     await client.connect();
@@ -130,14 +128,14 @@ async function unfollowUser(user, req) {
     const currentUser = await userCollection.findOne(query);
     if (!currentUser) {
         await client.close();
-        throw new Error("User not found");
+        console.log("User not found")
     }
 
     const newFollows = (currentUser.follows || []).filter(username => username !== user);
     
     const updateDoc = {$set: {follows: newFollows}};
     const updateResults = await userCollection.updateOne(query, updateDoc);
-    console.log('Unfollow update results:', updateResults);
+    console.log("Unfollow update results:", updateResults);
     
     await client.close();
     return "Successfully unfollowed user";
@@ -145,7 +143,7 @@ async function unfollowUser(user, req) {
 
 // Loading the page
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // Get login status
@@ -172,7 +170,6 @@ app.post(`/${studentID}/login`, async (req, res) => {
             // Store user data in session
             req.session.user = {
                 username: req.body["username"],
-                timestamp: Date.now()
             };
             const result = await findTeam(req.body["username"]);
             res.send({
@@ -199,8 +196,8 @@ app.post(`/${studentID}/login`, async (req, res) => {
 // Logout
 app.delete(`/${studentID}/login`, (req, res) => {
     if (req.session.user) {
-        req.session.destroy((err) => {
-            if (err) {
+        req.session.destroy(function(error) {
+            if (error) {
                 res.send({
                     "status": "error",
                     "message": "Error during logout"
@@ -217,7 +214,7 @@ app.delete(`/${studentID}/login`, (req, res) => {
             "status": "error",
             "message": "No active session to logout"
         });
-    }
+    }    
 });
 
 // Register
@@ -251,7 +248,7 @@ app.get(`/${studentID}/contents`, async (req, res) => {
 
 app.post(`/${studentID}/contents`, async (req, res) => {
     if (!req.session.user) {
-        return res.status(401).json({ "message": "Must be logged in to post" });
+        return res.json({ "message": "Must be logged in to post" });
     }
     try {
         const postData = {
@@ -267,10 +264,10 @@ app.post(`/${studentID}/contents`, async (req, res) => {
 });
 
 //Get follow requests and follow the correct user
-app.get(`/${studentID}/following`, async (req, res) => {
+app.get(`/${studentID}/follow/:username`, async (req, res) => {
     try {
         if (!req.session.user) {
-            return res.status(401).json({
+            return res.json({
                 status: "error",
                 message: "User not authenticated"
             });
@@ -282,7 +279,7 @@ app.get(`/${studentID}/following`, async (req, res) => {
         
         if (!results) {
             await client.close();
-            return res.status(404).json({
+            return res.json({
                 status: "error",
                 message: "User not found"
             });
@@ -294,8 +291,8 @@ app.get(`/${studentID}/following`, async (req, res) => {
             following: results.follows || []
         });
     } catch (error) {
-        console.error('Error in following route:', error);
-        res.status(500).json({
+        console.error("Error in following route:", error);
+        res.json({
             status: "error",
             message: error.message
         });
@@ -318,7 +315,7 @@ app.post(`/${studentID}/follow`, async (req, res) => {
             message: "Successfully followed user"
         });
     } catch (error) {
-        res.status(400).json({
+        res.json({
             status: "error",
             message: error.message
         });
@@ -328,19 +325,20 @@ app.post(`/${studentID}/follow`, async (req, res) => {
 app.delete(`/${studentID}/follow`, async (req, res) => {
     try {
         if (!req.session.user) {
-            return res.status(401).json({
+            return res.json({
                 status: "error",
                 message: "User not authenticated"
             });
         }
 
         const result = await unfollowUser(req.body.user, req);
+        console.log(result)
         res.json({
             status: "success",
             message: "Successfully unfollowed user"
         });
     } catch (error) {
-        res.status(400).json({
+        res.json({
             status: "error",
             message: error.message
         });
@@ -348,10 +346,10 @@ app.delete(`/${studentID}/follow`, async (req, res) => {
 });
 
 // Search endpoint
-app.get('/:studentid/content/search', async (req, res) => {
+app.get("/:studentid/contents/search", async (req, res) => {
     await client.connect();
     try {
-        console.log('Search request received:', {
+        console.log("Search request received:", {
             studentId: req.params.studentid,
             query: req.query.q
         });
@@ -359,10 +357,10 @@ app.get('/:studentid/content/search', async (req, res) => {
         const searchQuery = req.query.q;
         
         if (!searchQuery) {
-            return res.status(400).json({ error: 'Search query is required' });
+            return res.json({ error: "Search query is required" });
         }
 
-        console.log('Executing search with query:', searchQuery);
+        console.log("Executing search with query:", searchQuery);
 
         // Modified search query to be more specific and prevent duplicates
         const posts = await postCollection.aggregate([
@@ -402,9 +400,9 @@ app.get('/:studentid/content/search', async (req, res) => {
         res.json(posts);
         await client.close();
     } catch (error) {
-        console.error('Server error during search:', error);
-        res.status(500).json({ 
-            error: 'Internal server error',
+        console.error("Server error during search:", error);
+        res.json({ 
+            error: "Internal server error",
             details: error.message 
         });
         await client.close();
@@ -412,58 +410,54 @@ app.get('/:studentid/content/search', async (req, res) => {
 });
 
 // Make sure to create the text index when your server starts
-app.get('/:studentID/users/search', async (req, res) => {
+app.get("/:studentID/users/search", async (req, res) => {
     await client.connect();
     try {
         const searchTerm = req.query.term;
         const studentID = req.params.studentID;
         
-        console.log('Search request received:', { studentID, searchTerm }); // Debug log
+        console.log("Search request received:", { studentID, searchTerm }); // Debug log
 
         if (!searchTerm) {
-            console.log('No search term provided');
-            return res.status(400).json({ error: 'Search term is required' });
+            console.log("No search term provided");
+            return res.json({ error: "Search term is required" });
         }
 
         // Check if collection is accessible
         if (!userCollection) {
-            console.error('User collection not accessible');
-            return res.status(500).json({ error: 'Database collection error' });
+            console.error("User collection not accessible");
+            return res.json({ error: "Database collection error" });
         }
 
-        console.log('Attempting database query for term:', searchTerm);
-
         const users = await userCollection.find({
-            username: { $regex: searchTerm, $options: 'i' }
+            username: { $regex: searchTerm, $options: "i" }
         }).project({
             username: 1,
             team: 1,
             _id: 0
         }).limit(10).toArray();
 
-        console.log('Search results:', users); // Debug log
+        console.log("Search results:", users); // Debug log
 
         res.json(users);
         await client.close();
     } catch (error) {
-        console.error('Detailed search error:', error);
-        res.status(500).json({ 
-            error: 'Internal server error', 
+        console.error("Detailed search error:", error);
+        res.json({ 
+            error: "Internal server error", 
             details: error.message 
         });
         await client.close();
     }
 });
 
-app.get('/:studentID/users/:username/posts', async (req, res) => {
+app.get("/:studentID/users/:username/posts", async (req, res) => {
     await client.connect();
     try {
         const username = req.params.username;
         
         const posts = await postCollection.find({ 
             username: username 
-        }).sort({ 
-            timestamp: -1  // Sort by newest first
         }).toArray();
 
         res.json({
@@ -472,8 +466,8 @@ app.get('/:studentID/users/:username/posts', async (req, res) => {
         });
         await client.close();
     } catch (error) {
-        console.error('Error fetching user posts:', error);
-        res.status(500).json({
+        console.error("Error fetching user posts:", error);
+        res.json({
             status: "error",
             message: error.message
         });
