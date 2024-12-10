@@ -7,7 +7,9 @@ window.onload = async function() {
 };
 
 document.getElementById("homePageButton").addEventListener("click", function() {
-    loadContent("homeTemplate"), setupSearchListener()
+    loadContent("homeTemplate");
+    setupSearchListener();
+    initializeUploadHandlers();
 });
 
 document.getElementById("registerPageButton").addEventListener("click", function() {
@@ -30,6 +32,7 @@ document.getElementById("logOutButton").addEventListener("click", function() {
 window.onload = async function() {
     await checkLoginStatus();
     loadContent("homeTemplate");
+    document.getElementById('uploadForm').addEventListener('submit', uploadFile());
 };
 
 const teamColours = {
@@ -267,7 +270,7 @@ function displaySearchResults(users) {
     
     searchResults.innerHTML = `
         <div class="search-header">
-            <button id="closeSearchButton" class="close-button">×</button>
+            <button id="closeSearchButton" class="close-button">x</button>
         </div>
     `;
     
@@ -278,8 +281,7 @@ function displaySearchResults(users) {
             const userDiv = document.createElement("div");
             userDiv.className = "user-result";
             userDiv.innerHTML = `
-                <p><strong>Username:</strong> <a href="#" class="profile-link" onclick="loadProfile('${user.username}'); closeSearchPopup(); return false;">${user.username}</a></p>
-                <p><strong>Team:</strong> ${user.team}</p>
+                <a href="#" class="profile-link" onclick="loadProfile('${user.username}'); closeSearchPopup(); return false;">${user.username}</a>
             `;
             searchResults.appendChild(userDiv);
         });
@@ -327,6 +329,12 @@ function setupSearchListener() {
                                 </small>
                             </div>
                         `;
+
+                        const usernameLink = postElement.querySelector(".username-link");
+                        usernameLink.addEventListener("click", (event) => {
+                            event.preventDefault();
+                            loadProfile(post.username);
+                        });
                         postsContainer.appendChild(postElement);
                     }                    
 
@@ -338,13 +346,58 @@ function setupSearchListener() {
     }
 }
 
-function upload() {
-    document.getElementById("uploadPopup").style.display = "block";
+function uploadFile(e) {
+    console.log('Upload function called!');
+    e.preventDefault();
+
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    const fileInput = document.querySelector('input[type="file"]');
+    const file = fileInput.files[0];
+
+    console.log("File selected:", file);
+
+    const formData = new FormData();
+    formData.append('uploadFile', file);
+    formData.append('title', title);
+    formData.append('description', description);
+
+    fetch(`/${studentID}/upload`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Server response:", data);
+        alert(data.message);
+        if (data.message === "upload successful") {
+            closePopup();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred during upload');
+    });
 }
 
-function closePopup() {
-    document.getElementById("uploadPopup").style.display = "none";
+// Function to show the upload popup
+function upload() {
+    document.getElementById('uploadPopup').style.display = 'block';
 }
+
+// Function to close the popup
+function closePopup() {
+    document.getElementById('uploadPopup').style.display = 'none';
+}
+
+function initializeUploadHandlers() {
+    const form = document.getElementById('uploadForm');
+    if (form) {
+        form.addEventListener('submit', uploadFile);
+        console.log('Upload form handler initialized');
+    }
+}
+
 
 async function loadContent(templateId) {
     const contentDiv = document.getElementById("content");
@@ -355,30 +408,26 @@ async function loadContent(templateId) {
 
     if (templateId === "homeTemplate") {
         await loadPosts();
-        
-        // Only show button if user is logged in
+
         const isLoggedIn = await checkLoginStatus();
         const uploadButton = document.getElementById("uploadButton");
-        if (uploadButton && isLoggedIn) {
+        if (uploadButton && isLoggedIn["status"] == "logged_in") {
             uploadButton.style.display = "block";
         }
-        
-        // Re-attach event listener to upload form
+
         const uploadForm = document.getElementById("uploadForm");
         if (uploadForm) {
             uploadForm.addEventListener("submit", handleUpload);
         }
 
-        // Set up search functionality
         const searchButton = document.getElementById("postSearchButton");
         if (searchButton) {
             searchButton.addEventListener("click", async function() {
                 const searchQuery = document.getElementById("postSearch").value.trim();
-                const postsContainer = document.getElementById("posts-container"); // Make sure this matches your div ID
-                const uploadsContainer = document.getElementById("posts-container");
+                const postsContainer = document.getElementById("posts-container");
 
                 postsContainer.innerHTML = "";
-                uploadsContainer.innerHTML = "";
+                
                 if (searchQuery) {
                     try {
                         const response = await fetch(`/${studentID}/contents/search?q=${encodeURIComponent(searchQuery)}`, {
@@ -389,43 +438,111 @@ async function loadContent(templateId) {
                         });
 
                         const posts = await response.json();
+                        console.log("Search results:", posts); // Debug log
                                                
                         if (posts.length === 0) {
                             postsContainer.innerHTML = "<p>No posts found matching your search.</p>";
                             return;
                         }
                         
-                        posts.forEach(post => {
+                        for (let i = 0; i < posts.length; i++) {
+                            const post = posts[i];
+                            console.log("Processing post:", post); // Debug log
+
                             const postElement = document.createElement("div");
                             postElement.className = "post";
-                            postElement.innerHTML = 
-                            `<h3>${post.title}</h3>
-                            <p>${post.description}</p>
-                            <div class="post-footer">
-                                <small>Posted by: 
-                                    <a href="#" class="username-link" data-username="${post.username}">
-                                        ${post.username}
-                                    </a>
-                                </small>
-                            </div>
-                        `;
-                            postsContainer.appendChild(postElement);
-                        });
+
+                            // Check for file in multiple possible property names FIXLATER
+                            const file = post.fileName || post.file || post.uploadFile || post.filepath || post.file_name;
+                            
+                            if (file) {
+                                let fileDisplay = '';
+                                if (post.fileName) {
+                                    const filePath = `/uploads/${post.fileName}`; //path to uploads folder
+                                    const fileExtension = post.fileName.split('.').pop().toLowerCase();
+                                    
+                                    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
+                                        fileDisplay = `
+                                            <div class="media-container">
+                                                <img src="${filePath}" alt="Uploaded content" class="post-image">
+                                            </div>`;
+                                    }
+                                    else if (['mp4', 'webm'].includes(fileExtension)) {
+                                        fileDisplay = `
+                                            <div class="media-container">
+                                                <video controls class="post-video">
+                                                    <source src="${filePath}" type="video/${fileExtension}">
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                            </div>`;
+                                    }
+                                    else if (['mp3', 'wav'].includes(fileExtension)) {
+                                        fileDisplay = `
+                                            <div class="media-container">
+                                                <audio controls class="post-audio">
+                                                    <source src="${filePath}" type="audio/${fileExtension}">
+                                                    Your browser does not support the audio tag.
+                                                </audio>
+                                            </div>`;
+                                    }
+                                    else {
+                                        fileDisplay = `
+                                            <div class="media-container">
+                                                <a href="${filePath}" download class="file-download">Download ${post.fileName}</a>
+                                            </div>`;
+                                    }
+                                }
+
+                                postElement.innerHTML = `
+                                    <h3>${post.title}</h3>
+                                    <p>${post.description}</p>
+                                    ${fileDisplay}
+                                    <div class="post-footer">
+                                        <small>Posted by: 
+                                            <a href="#" class="username-link" data-username="${post.username}">
+                                                ${post.username}
+                                            </a>
+                                        </small>
+                                    </div>
+                                `;
+
+                                const usernameLink = postElement.querySelector(".username-link");
+                                usernameLink.addEventListener("click", (event) => {
+                                    event.preventDefault();
+                                    loadProfile(post.username);
+                                });
+                                postsContainer.appendChild(postElement);  
+                            }
+                        }
+
+        
+                    
                     } catch (error) {
-                        console.log(`${error} from loadContent()`)
+                        console.log(`${error} from loadContent()`);
                         postsContainer.innerHTML = "<p>Error searching posts. Please try again.</p>";
                     }
                 } else {
                     // If search is empty, reload all posts
-                    loadPosts();
+                    await loadPosts();
                 }
             });
+
+            // Add Enter key support for search
+            const searchInput = document.getElementById("postSearch");
+            if (searchInput) {
+                searchInput.addEventListener("keypress", function(event) {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        searchButton.click();
+                    }
+                });
+            }
         }
     }
 }
 
 // Function to load posts
-async function loadPosts(searchQuery) {
+async function loadPosts() {
     try {
         const response = await fetch(`/${studentID}/contents`, {
             method: "GET",
@@ -435,6 +552,7 @@ async function loadPosts(searchQuery) {
         });
 
         const posts = await response.json();
+        console.log(posts)
         displayPosts(posts);
     } catch (error) {
         console.log(`${error} from: loadPosts()`);
@@ -443,25 +561,56 @@ async function loadPosts(searchQuery) {
 
 
 // Function to display posts
-async function displayPosts(posts) {
-    const uploadedItems = document.getElementById("posts-container");
-    if (!uploadedItems) {
-        return;
-    }
-    
-    uploadedItems.innerHTML = "";
-    
-    if (posts.length === 0) {
-        uploadedItems.innerHTML = "<p>No posts yet!</p>";
-        return;
-    }
+function displayPosts(posts) {
+    const postsContainer = document.getElementById("posts-container");
+    postsContainer.innerHTML = "";
 
-    posts.forEach(post => {
+    for (let i = 0; i < posts.length; i++) {
+        const post = posts[i];
         const postElement = document.createElement("div");
         postElement.className = "post";
+        
+        let fileDisplay = '';
+        if (post.fileName) {
+            const filePath = `/uploads/${post.fileName}`; //path to uploads folder
+            const fileExtension = post.fileName.split('.').pop().toLowerCase();
+            
+            if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
+                fileDisplay = `
+                    <div class="media-container">
+                        <img src="${filePath}" alt="Uploaded content" class="post-image">
+                    </div>`;
+            }
+            else if (['mp4', 'webm'].includes(fileExtension)) {
+                fileDisplay = `
+                    <div class="media-container">
+                        <video controls class="post-video">
+                            <source src="${filePath}" type="video/${fileExtension}">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>`;
+            }
+            else if (['mp3', 'wav'].includes(fileExtension)) {
+                fileDisplay = `
+                    <div class="media-container">
+                        <audio controls class="post-audio">
+                            <source src="${filePath}" type="audio/${fileExtension}">
+                            Your browser does not support the audio tag.
+                        </audio>
+                    </div>`;
+            }
+            else {
+                fileDisplay = `
+                    <div class="media-container">
+                        <a href="${filePath}" download class="file-download">Download ${post.fileName}</a>
+                    </div>`;
+            }
+        }
+
         postElement.innerHTML = `
             <h3>${post.title}</h3>
             <p>${post.description}</p>
+            ${fileDisplay}
             <div class="post-footer">
                 <small>Posted by: 
                     <a href="#" class="username-link" data-username="${post.username}">
@@ -471,15 +620,14 @@ async function displayPosts(posts) {
             </div>
         `;
 
-        // Add click event listener to username link
         const usernameLink = postElement.querySelector(".username-link");
         usernameLink.addEventListener("click", (event) => {
             event.preventDefault();
             loadProfile(post.username);
         });
-
-        uploadedItems.appendChild(postElement);
-    });
+        
+        postsContainer.appendChild(postElement);
+    }
 }
 
 async function loadProfile(username) {
@@ -514,9 +662,6 @@ async function loadProfile(username) {
         });
 
         const postsResult = await postsResponse.json();
-        
-        // Debug log to see the structure
-        console.log("Profile posts result:", postsResult);
 
         // Check if posts exist in the response
         let posts;
@@ -529,29 +674,94 @@ async function loadProfile(username) {
         let postsHTML = "";
         for (let i = 0; i < posts.length; i++) {
             const post = posts[i];
+            
+            let fileDisplay = '';
+            if (post.fileName) {
+                const filePath = `/uploads/${post.fileName}`;
+                const fileExtension = post.fileName.split('.').pop().toLowerCase();
+                
+                if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension)) {
+                    fileDisplay = `
+                        <div class="post-media">
+                            <div class="post-image-container">
+                                <img src="${filePath}" alt="Uploaded content" class="post-image">
+                            </div>
+                        </div>`;
+                }
+                else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
+                    fileDisplay = `
+                        <div class="post-media">
+                            <div class="post-video-container">
+                                <video controls class="post-video">
+                                    <source src="${filePath}" type="video/${fileExtension}">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                        </div>`;
+                }
+                else if (['mp3', 'wav'].includes(fileExtension)) {
+                    fileDisplay = `
+                        <div class="post-media">
+                            <div class="post-audio-container">
+                                <audio controls class="post-audio">
+                                    <source src="${filePath}" type="audio/${fileExtension}">
+                                    Your browser does not support the audio tag.
+                                </audio>
+                            </div>
+                        </div>`;
+                }
+                else {
+                    fileDisplay = `
+                        <div class="post-media">
+                            <div class="post-file-container">
+                                <a href="${filePath}" download class="file-download">
+                                    <i class="fas fa-download"></i> Download ${post.fileName}
+                                </a>
+                            </div>
+                        </div>`;
+                }
+            }
+
             postsHTML += `
                 <div class="post">
-                    <div class="post-details">
-                        <span class="post-username">${post.username}</span>
-                        <br>
-                        <span class="post-description">${post.title}</span>
-                        <br>
-                        <span class="post-description">${post.description}</span>
+                    <div class="post-content">
+                        <h3 class="post-title">${post.title}</h3>
+                        <p class="post-description">${post.description}</p>
+                        ${fileDisplay}
+                        <div class="post-footer">
+                            <small>Posted by: ${post.username}</small>
+                        </div>
                     </div>
                 </div>
             `;
         }
 
+        const isLoggedIn = await checkLoginStatus();
+        let currentUser = null;
 
         const profileTemplate = document.getElementById("profileTemplate");
+
+        let followButtonHTML = "";
+        if (isLoggedIn["status"] === "logged_in" && currentUser != username) {
+            followButtonHTML = `<button id="followButton">${buttonText}</button>`;
+            currentUser = isLoggedIn["username"]
+        }
+
+        let postsSectionHTML;
+        if (posts.length > 0) {
+            postsSectionHTML = postsHTML;
+        } else {
+            postsSectionHTML = "<p>No posts yet.</p>";
+        }
+
         profileTemplate.innerHTML = `
             <div class="profile-header">
                 <h2>${username}'s Profile</h2>
-                <button id="followButton">${buttonText}</button>
+                ${followButtonHTML}
             </div>
             <div class="posts-section">
                 <h3>Posts</h3>
-                ${posts.length > 0 ? postsHTML : "<p>No posts yet.</p>"}
+                ${postsSectionHTML}
             </div>
         `;
 
@@ -574,38 +784,55 @@ async function loadProfile(username) {
             });
         }
 
-
     } catch (error) {
         console.log(`${error} from: loadProfile()`);
     }
 }
 
+const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'mp3', 'wav']; 
+
 async function handleUpload(event) {
     event.preventDefault();
     const title = document.getElementById("title").value;
     const description = document.getElementById("description").value;
+    const fileInput = document.querySelector('input[type="file"]');
+    const file = fileInput.files[0];
 
     try {
+        if (file) {
+            // Get file extension and check if it's allowed
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            if (!allowedExtensions.includes(fileExtension)) {
+                alert(`Invalid file type. Allowed types are: ${allowedExtensions.join(', ')}`);
+                return;
+            }
+        }
+
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        if (file) {
+            formData.append('uploadFile', file);
+        }
+        
         const response = await fetch(`/${studentID}/contents`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ title, description })
+            body: formData
         });
+
         const result = await response.json();
         if (response.ok) {
             document.getElementById("uploadPopup").style.display = "none";
             await loadPosts();
             document.getElementById("uploadForm").reset();
         } else {
-            console.log(result.message);
+            alert(result.message);
         }
     } catch (error) {
-        console.log(`${error} from: handleUpload()`);
+        console.error("Upload error:", error);
+        alert("Error uploading: " + error.message);
     }
 }
-
 //When user presses follow in the displayPosts function
 async function followUser(username) {
     try {
@@ -698,7 +925,7 @@ async function login() {
     });
 
     try {
-        const statusResponse = await fetch(`/${studentID}/login?username=${encodeURIComponent(loginUsername)}`, {
+        const statusResponse = await fetch(`/${studentID}/login`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json"
@@ -777,10 +1004,14 @@ async function checkLoginStatus() {
                 applyTheme(savedTeam);
             }
 
+            console.log(result)
             return result
         } else {
             console.log("No user is logged in");
+            return result;
         }
+
+        
     } catch (error) {
         console.log(`${error} from: checkLoginStatus()`);
     }

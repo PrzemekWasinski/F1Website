@@ -25,18 +25,17 @@
             <div id="uploadPopup" class="popup" style="display: none;">
                 <div class="popup-content">
                     <span class="close" onclick="closePopup()">&times;</span>
-                    <form id="uploadForm">
+                    <form id="uploadForm">  <!-- Removed onsubmit attribute -->
                         <h3>Create New Post</h3>
                         <input type="text" id="title" placeholder="Title" required>
                         <textarea id="description" placeholder="Description" required></textarea>
-                        <button type="submit">Submit</button>
+                        <input type="file" name="uploadFile" />
+                        <input type="submit" value="Upload!" />
                     </form>
                 </div>
             </div>
             
-            <!-- Add this div for posts -->
             <div id="posts-container"></div>
-            
             <div id="uploadedItems"></div>
         </div>
     </template>

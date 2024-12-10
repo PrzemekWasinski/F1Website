@@ -176,3 +176,71 @@ input[type="text"], input[type="password"] {
     margin-top: 10px;
     color: #666;
 }
+
+.post {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+}
+
+.post-image {
+    max-width: 400px;  /* Maximum width */
+    max-height: 300px; /* Maximum height */
+    width: auto;
+    height: auto;
+    object-fit: contain; /* Maintains aspect ratio */
+    margin: 10px 0;
+    border-radius: 5px;
+    display: block;    /* Centers the image */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.post-video {
+    max-width: 400px;  /* Maximum width */
+    max-height: 300px; /* Maximum height */
+    width: 100%;
+    margin: 10px auto; /* Centers the video */
+    display: block;
+}
+
+.post-audio {
+    max-width: 400px;
+    width: 100%;
+    margin: 10px auto;
+    display: block;
+}
+
+
+/* Optional: Add a hover effect for images */
+.post-image:hover {
+    cursor: pointer;
+    transform: scale(1.02);
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Optional: Add a container for media to ensure consistent spacing */
+.media-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 15px 0;
+    overflow: hidden;
+}
+
+.file-download {
+    display: inline-block;
+    margin: 10px 0;
+    padding: 8px 15px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #333;
+}
+
+.file-download:hover {
+    background-color: #e0e0e0;
+}

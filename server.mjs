@@ -3,6 +3,7 @@ import express from "express";
 import path from "path";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import session from "express-session";
+import fileUpload from "express-fileupload";
 
 const fileName = "server.mjs";
 const studentID = "M00931085";
@@ -19,6 +20,9 @@ app.use(session({
     }
 }));
 
+app.use(fileUpload({
+    createParentPath: true
+}));
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
@@ -167,7 +171,6 @@ app.post(`/${studentID}/login`, async (req, res) => {
     try {
         const results = await checkLogin(req.body["username"], req.body["password"]);
         if (results.length > 0) {
-            // Store user data in session
             req.session.user = {
                 username: req.body["username"],
             };
@@ -247,18 +250,33 @@ app.get(`/${studentID}/contents`, async (req, res) => {
 });
 
 app.post(`/${studentID}/contents`, async (req, res) => {
-    if (!req.session.user) {
-        return res.json({ "message": "Must be logged in to post" });
-    }
     try {
+        let fileName = null;
+        if (req.files && req.files.uploadFile) {
+            const uploadFile = req.files.uploadFile;
+            const uploadsDir = './public/uploads';
+            const uploadPath = path.join(uploadsDir, uploadFile.name);
+
+            try {
+                await uploadFile.mv(uploadPath);
+                fileName = uploadFile.name;
+            } catch (uploadError) {
+                console.error("File upload error:", uploadError);
+                return res.status(500).json({ "message": "Error uploading file" });
+            }
+        }
+
         const postData = {
             username: req.session.user.username,
             title: req.body.title,
-            description: req.body.description
+            description: req.body.description,
+            fileName: fileName
         };
+
         await createPost(postData);
         res.json({ "message": "Post created successfully" });
     } catch (error) {
+        console.error("Error:", error);
         res.status(500).json({ "message": "Error creating post" });
     }
 });
@@ -390,7 +408,8 @@ app.get("/:studentid/contents/search", async (req, res) => {
                     title: { $first: "$title" },
                     description: { $first: "$description" },
                     username: { $first: "$username" },
-                    score: { $first: "$score" }
+                    score: { $first: "$score" },
+                    fileName: {$first: "$fileName"}
                 }
             }
         ]).toArray();
@@ -474,6 +493,7 @@ app.get("/:studentID/users/:username/posts", async (req, res) => {
         await client.close();
     }
 });
+
 
 // Listen on port 8080
 app.listen(8080, () => {
