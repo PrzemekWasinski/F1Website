@@ -20,11 +20,11 @@
         <div class="home-content">
             <h2>Home Page</h2>
             <input id="postSearch" placeholder="Search for posts..."> <button id="postSearchButton">Search</button>
-            <button onclick="upload()" id="uploadButton" style="display: none">Upload Post</button>
+            <button id="uploadButton" style="display: none">Upload Post</button>
             
             <div id="uploadPopup" class="popup" style="display: none;">
                 <div class="popup-content">
-                    <span class="close" onclick="closePopup()">&times;</span>
+                    <span class="close" id="closeUploadPopup">&times;</span>
                     <form id="uploadForm">  <!-- Removed onsubmit attribute -->
                         <h3>Create New Post</h3>
                         <input type="text" id="title" placeholder="Title" required>
@@ -58,11 +58,11 @@
             <br>
             <input type="radio" name="team" value="Aston Martin"> Aston Martin 
             <br>
-            <input type="radio" name="team" value="Alpine"> Alpine 
+            <input type="radio" name="team" value="Alpine F1 Team"> Alpine 
             <br>
-            <input type="radio" name="team" value="Haas"> Haas 
+            <input type="radio" name="team" value="Haas F1 Team"> Haas 
             <br>
-            <input type="radio" name="team" value="RB"> RB 
+            <input type="radio" name="team" value="RB F1 Team"> RB 
             <br>
             <input type="radio" name="team" value="Williams"> Williams 
             <br>
@@ -70,14 +70,14 @@
             <br>
         </div>
 
-        <button id="registerButton" onclick="register()">Register</button>
+        <button id="registerButton">Register</button>
     </template>
 
     <template id="loginTemplate">
         <h2>Login</h2>
         <input id="loginUsername" type="text" placeholder="Username">
         <input id="loginPassword" type="password" placeholder="Password">
-        <button id="loginButton" onclick="login()">Login</button>
+        <button id="loginButton">Login</button>
     </template>
 
     <template id="profileTemplate">
@@ -87,6 +87,6 @@
     <!--This is where loaded content will be-->
     <div id="content"></div>
 
-    <script src="./JavaScript/index.js"></script>
+    <script type="module" src="./JavaScript/index.js"></script>
 </body>
 </html>
