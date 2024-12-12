@@ -15,7 +15,6 @@ export function closePopup() {
     document.getElementById("uploadPopup").style.display = "none";
 }
 
-
 export async function handleUpload(event) {
     event.preventDefault();
     const title = document.getElementById("title").value;
@@ -60,10 +59,12 @@ export async function handleUpload(event) {
     }
 }
 
-export async function loadPosts() {
+export async function loadPosts(followedOnly = false) {
     try {
         console.log('Fetching posts...');
-        const response = await fetch(`/${studentID}/contents`, {
+        const endpoint = followedOnly ? `/${studentID}/contents` : `/${studentID}/contents/all`;
+        
+        const response = await fetch(endpoint, {
             method: "GET",
             headers: {
                 "Accept": "application/json",
@@ -76,10 +77,9 @@ export async function loadPosts() {
             const errorData = await response.json();
             console.error('Server error:', errorData);
             
-            // If connection error, retry once
             if (errorData.error === 'Database connection error') {
                 console.log('Retrying fetch...');
-                return await loadPosts();
+                return await loadPosts(followedOnly);
             }
             
             throw new Error(errorData.message || 'Failed to fetch posts');

@@ -1,7 +1,5 @@
 import { loadProfile } from "./profile.js";
 
-
-
 export function displaySearchResults(users) {
     const overlay = document.querySelector(".popup-overlay");
     const searchResults = document.getElementById("searchResults");

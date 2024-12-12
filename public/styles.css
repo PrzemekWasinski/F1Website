@@ -681,7 +681,7 @@ body {
 #uploadForm h3 {
     margin: 0 0 15px 0;
     color: #15151E;
-    font-family: 'speeday', sans-serif;
+    font-family: 'helvetica', sans-serif;
     text-transform: uppercase;
 }
 
@@ -691,7 +691,7 @@ body {
     border: 2px solid #15151E;
     border-radius: 4px;
     font-size: 14px;
-    font-family: 'speeday', sans-serif;
+    font-family: 'helvetica', sans-serif;
 }
 
 #uploadForm input[type="text"]:focus,

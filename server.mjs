@@ -10,12 +10,10 @@ const studentID = "M00931085";
 
 const app = express();
 
-// Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Session middleware
 app.use(session({
     secret: "cookie",
     resave: false,
@@ -26,15 +24,12 @@ app.use(session({
     }
 }));
 
-// File upload middleware
 app.use(fileUpload({
     createParentPath: true
 }));
 
-// Static files middleware
 app.use(express.static("public"));
 
-// MongoDB Connection Setup
 const connectionURI = "mongodb://127.0.0.1:27017?retryWrites=true&w=majority";
 
 const client = new MongoClient(connectionURI, {
@@ -45,7 +40,6 @@ const client = new MongoClient(connectionURI, {
     }
 });
 
-// MongoDB Details
 let database;
 let userCollection;
 let postCollection;
@@ -66,7 +60,6 @@ async function connectToMongo() {
     return { database, userCollection, postCollection };
 }
 
-// Middleware to ensure database connection
 app.use(async (req, res, next) => {
     try {
         await connectToMongo();
@@ -88,7 +81,6 @@ async function findUsername(username) {
     return team;
 }
 
-/////////////////////////FIND TEAM IS HERE//////////////////////////////
 async function findTeam(username) {
     await client.connect();
     const query = { "username": username };
@@ -371,8 +363,7 @@ app.post(`/${studentID}/contents/:postId/comment`, async (req, res) => {
         const newComment = {
             id: new ObjectId(),
             username: username,
-            text: comment,
-            timestamp: new Date()
+            text: comment
         };
 
         const result = await postCollection.updateOne(
@@ -427,50 +418,31 @@ app.get(`/${studentID}/contents/:postId/comments`, async (req, res) => {
     }
 });
 
-// You'll also need to modify your existing GET endpoint to include likes and comments
+// Get posts from followed users endpoint
 app.get(`/${studentID}/contents`, async (req, res) => {
     try {
-        // Ensure connection is active
         await connectToMongo();
-
-        let posts;
         
-        // If user is logged in and has follows, include a followedPosts field
-        if (req.session.user) {
-            const currentUser = await userCollection.findOne(
-                { username: req.session.user.username },
-                { projection: { follows: 1 } }
-            );
-
-            posts = await postCollection.find().sort({ timestamp: -1 }).toArray();
-
-            // Add a followedByUser field to each post
-            posts = posts.map(post => ({
-                ...post,
-                followedByUser: currentUser?.follows?.includes(post.username) || false
-            }));
-        } else {
-            posts = await postCollection.find().sort({ timestamp: -1 }).toArray();
+        if (!req.session.user) {
+            return res.status(401).json({ error: 'User not logged in' });
         }
 
-        console.log(`Found ${posts.length} posts`);
+        const currentUser = await userCollection.findOne({ 
+            username: req.session.user.username 
+        });
 
-        // Format posts
-        const formattedPosts = posts.map(post => ({
-            _id: post._id,
-            username: post.username,
-            title: post.title,
-            description: post.description,
-            likes: post.likes || [],
-            comments: post.comments || {},
-            fileName: post.fileName || null,
-            followedByUser: post.followedByUser || false
-        }));
+        if (!currentUser || !currentUser.follows) {
+            return res.json([]);
+        }
 
-        res.json(formattedPosts);
+        // Get posts where the username is in the user's follows array
+        const posts = await postCollection.find({
+            username: { $in: currentUser.follows }
+        }).toArray();
 
+        res.json(posts);
     } catch (error) {
-        console.error('Error fetching posts:', error);
+        console.error('Error fetching followed users posts:', error);
         res.status(500).json({ 
             error: 'Failed to fetch posts',
             message: error.message 
@@ -745,6 +717,21 @@ app.get(`/${studentID}/f1-standings/:year`, async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to fetch F1 standings'
+        });
+    }
+});
+
+// Add this new endpoint for all posts
+app.get(`/${studentID}/contents/all`, async (req, res) => {
+    try {
+        await connectToMongo();
+        const posts = await getAllPosts();
+        res.json(posts);
+    } catch (error) {
+        console.error('Error fetching all posts:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch posts',
+            message: error.message 
         });
     }
 });

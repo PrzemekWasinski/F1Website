@@ -31,31 +31,13 @@ export async function loadContent(templateId) {
                 const button = this;
                 try {
                     if (loginStatus.status !== "logged_in") {
-                        alert("Please log in to view posts from followed users");
                         return;
                     }
         
                     const showingFollowed = button.textContent === "Show All Posts";
                     button.disabled = true;
         
-                    const response = await fetch(`/${studentID}/contents`, {
-                        method: "GET",
-                        headers: {
-                            "Accept": "application/json",
-                            "Content-Type": "application/json"
-                        }
-                    });
-        
-                    if (!response.ok) {
-                        throw new Error("Failed to fetch posts");
-                    }
-        
-                    const posts = await response.json();
-                    const filteredPosts = showingFollowed 
-                        ? posts 
-                        : posts.filter(post => post.followedByUser);
-        
-                    await displayPosts(filteredPosts);
+                    await loadPosts(!showingFollowed);
                     
                     button.textContent = showingFollowed 
                         ? "Show Followed Users' Posts"
@@ -63,7 +45,6 @@ export async function loadContent(templateId) {
         
                 } catch (error) {
                     console.error('Error toggling posts:', error);
-                    alert(`Error: ${error.message}`);
                 } finally {
                     button.disabled = false;
                 }
@@ -93,44 +74,37 @@ export async function loadContent(templateId) {
                     
                     try {
                         let posts;
-                        if (searchQuery) {
-                            const response = await fetch(`/${studentID}/contents/search?q=${encodeURIComponent(searchQuery)}`, {
-                                method: "GET",
-                                headers: {
-                                    "Content-Type": "application/json"
-                                }
-                            });
+                        const response = await fetch(searchQuery 
+                            ? `/${studentID}/contents/search?q=${encodeURIComponent(searchQuery)}`
+                            : `/${studentID}/contents/all`, {
+                            method: "GET",
+                            headers: {
+                                "Content-Type": "application/json"
+                            }
+                        });
 
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-
-                            const text = await response.text();
-                            if (!text) {
-                                throw new Error('Empty response received');
-                            }
-
-                            try {
-                                posts = JSON.parse(text);
-                            } catch (e) {
-                                console.error('Failed to parse JSON:', text);
-                                throw new Error('Invalid JSON response');
-                            }
-
-                            if (!Array.isArray(posts) || posts.length === 0) {
-                                const postsContainer = document.getElementById("posts-container");
-                                postsContainer.innerHTML = "<p>No posts found matching your search.</p>";
-                                return;
-                            }
-                        } else {
-                            const response = await fetch(`/${studentID}/contents`);
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-                            posts = await response.json();
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
 
-                        // Use the displayPosts function to show the results
+                        const text = await response.text();
+                        if (!text) {
+                            throw new Error('Empty response received');
+                        }
+
+                        try {
+                            posts = JSON.parse(text);
+                        } catch (error) {
+                            console.error('Failed to parse JSON:', text);
+                            throw new Error('Invalid JSON response');
+                        }
+
+                        if (!Array.isArray(posts) || posts.length === 0) {
+                            const postsContainer = document.getElementById("posts-container");
+                            postsContainer.innerHTML = "<p>No posts found matching your search.</p>";
+                            return;
+                        }
+
                         await displayPosts(posts);
 
                     } catch (error) {
@@ -175,9 +149,9 @@ export async function loadContent(templateId) {
                 const contentDiv = document.getElementById("content");
                 const template = document.getElementById("registerTemplate");
 
-                if (template) { // Check if the template exists
-                    contentDiv.innerHTML = ""; // Clear current content
-                    contentDiv.appendChild(template.content.cloneNode(true)); // Clone and append the template content
+                if (template) {
+                    contentDiv.innerHTML = "";
+                    contentDiv.appendChild(template.content.cloneNode(true));
                 } else {
                     console.error("registerTemplate not found");
                 }

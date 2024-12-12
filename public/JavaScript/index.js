@@ -31,10 +31,10 @@ document.getElementById("logOutButton").addEventListener("click", function() {
     logOut();
 })
 
+//User Search
 const userSearchInput = document.getElementById("userSearch");
 const userSearchButton = document.getElementById("userSearchButton");
 
-// Create overlay
 const overlay = document.createElement("div");
 overlay.className = "popup-overlay";
 document.body.appendChild(overlay);
