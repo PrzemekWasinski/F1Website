@@ -226,7 +226,7 @@ app.post(`/${studentID}/login`, async (req, res) => {
         console.log(`${error} (from ${fileName})`);
         res.send({
             "status": "error",
-            "message": "Server error during login"
+            "message": "Server error"
         });
     }
 });
@@ -275,25 +275,22 @@ app.post(`/${studentID}/users`, async (req, res) => {
 });
 
 //UPLOADS????????????????????????????????????????????????????????????????????
-// Add these endpoints to your Express server
 
-// Like a post
-
-app.post('/:studentId/contents/:postId/like', async (req, res) => {
+app.post(`/${studentID}/contents/:postId/like`, async (req, res) => {
     try {
         const { studentId, postId } = req.params;
         const { username } = req.body;
 
-        console.log('Like request:', { studentId, postId, username });
+        console.log("Like request:", { studentId, postId, username });
 
         if (!username) {
-            return res.status(400).json({ error: 'Username is required' });
+            return res.status(400).json({ error: "Username is required" });
         }
 
         await connectToMongo();
 
         if (!ObjectId.isValid(postId)) {
-            return res.status(400).json({ error: 'Invalid post ID format' });
+            return res.status(400).json({ error: "Invalid post ID format" });
         }
 
         // Find the post first
@@ -345,7 +342,7 @@ app.post('/:studentId/contents/:postId/like', async (req, res) => {
     }
 });
 
-app.post('/:studentId/contents/:postId/comment', async (req, res) => {
+app.post(`/${studentID}/contents/:postId/comment`, async (req, res) => {
     try {
         const { studentId, postId } = req.params;
         const { username, comment } = req.body;
@@ -402,7 +399,7 @@ app.post('/:studentId/contents/:postId/comment', async (req, res) => {
 });
 
 // Get comments endpoint
-app.get('/:studentId/contents/:postId/comments', async (req, res) => {
+app.get(`/${studentID}/contents/:postId/comments`, async (req, res) => {
     try {
         const { studentId, postId } = req.params;
 
@@ -431,15 +428,31 @@ app.get('/:studentId/contents/:postId/comments', async (req, res) => {
 });
 
 // You'll also need to modify your existing GET endpoint to include likes and comments
-app.get('/:studentId/contents', async (req, res) => {
+app.get(`/${studentID}/contents`, async (req, res) => {
     try {
-        const { studentId } = req.params;
-        
         // Ensure connection is active
         await connectToMongo();
+
+        let posts;
         
-        // Get posts
-        const posts = await postCollection.find().toArray();
+        // If user is logged in and has follows, include a followedPosts field
+        if (req.session.user) {
+            const currentUser = await userCollection.findOne(
+                { username: req.session.user.username },
+                { projection: { follows: 1 } }
+            );
+
+            posts = await postCollection.find().sort({ timestamp: -1 }).toArray();
+
+            // Add a followedByUser field to each post
+            posts = posts.map(post => ({
+                ...post,
+                followedByUser: currentUser?.follows?.includes(post.username) || false
+            }));
+        } else {
+            posts = await postCollection.find().sort({ timestamp: -1 }).toArray();
+        }
+
         console.log(`Found ${posts.length} posts`);
 
         // Format posts
@@ -450,7 +463,8 @@ app.get('/:studentId/contents', async (req, res) => {
             description: post.description,
             likes: post.likes || [],
             comments: post.comments || {},
-            fileName: post.fileName || null
+            fileName: post.fileName || null,
+            followedByUser: post.followedByUser || false
         }));
 
         res.json(formattedPosts);
@@ -463,29 +477,6 @@ app.get('/:studentId/contents', async (req, res) => {
         });
     }
 });
-
-// Error handling middleware
-app.use((error, req, res, next) => {
-    console.error('Server error:', error);
-    res.status(500).json({
-        error: 'Internal Server Error',
-        message: error.message
-    });
-});
-
-// Cleanup on server shutdown
-process.on('SIGINT', async () => {
-    try {
-        await client.close();
-        console.log('MongoDB connection closed.');
-        process.exit(0);
-    } catch (error) {
-        console.error('Error during shutdown:', error);
-        process.exit(1);
-    }
-});
-
-
 
 app.post(`/${studentID}/content`, async (req, res) => {
     try {
@@ -604,8 +595,7 @@ app.delete(`/${studentID}/follow`, async (req, res) => {
 });
 
 // Search endpoint
-// Add this to your server.js or where your other endpoints are defined
-app.get('/:studentId/contents/search', async (req, res) => {
+app.get(`/${studentID}/contents/search`, async (req, res) => {
     try {
         const { studentId } = req.params;
         const searchQuery = req.query.q;
@@ -637,7 +627,7 @@ app.get('/:studentId/contents/search', async (req, res) => {
 });
 
 // Make sure to create the text index when your server starts
-app.get("/:studentID/users/search", async (req, res) => {
+app.get(`/${studentID}/users/search`, async (req, res) => {
     await client.connect();
     try {
         const searchTerm = req.query.term;
@@ -671,7 +661,7 @@ app.get("/:studentID/users/search", async (req, res) => {
     }
 });
 
-app.get("/:studentID/users/:username/posts", async (req, res) => {
+app.get(`/${studentID}/users/:username/posts`, async (req, res) => {
     await client.connect();
     try {
         const username = req.params.username;
@@ -692,6 +682,70 @@ app.get("/:studentID/users/:username/posts", async (req, res) => {
             message: error.message
         });
         await client.close();
+    }
+});
+
+app.get(`/${studentID}/f1-standings/:year`, async (req, res) => {
+    const year = req.params.year;
+    const driversArray = [];
+    const constructorsArray = [];
+    const api = `https://ergast.com/api/f1/${year}`;
+
+    try {
+        // Fetch driver standings
+        const driverResponse = await fetch(`${api}/driverStandings.json`);
+        if (!driverResponse.ok) {
+            throw new Error(`Failed to fetch driver standings: ${driverResponse.status}`);
+        }
+        const driverData = await driverResponse.json();
+
+        // Fetch constructor standings
+        const constructorResponse = await fetch(`${api}/constructorStandings.json`);
+        if (!constructorResponse.ok) {
+            throw new Error(`Failed to fetch constructor standings: ${constructorResponse.status}`);
+        }
+        const constructorData = await constructorResponse.json();
+
+        // Process driver standings
+        const drivers = driverData.MRData?.StandingsTable?.StandingsLists[0]?.DriverStandings;
+        if (drivers) {
+            drivers.forEach(driver => {
+                driversArray.push({
+                    Position: driver.position,
+                    Name: `${driver.Driver.givenName} ${driver.Driver.familyName}`,
+                    Team: driver.Constructors[0].name,
+                    Points: driver.points
+                });
+            });
+        }
+
+        // Process constructor standings
+        const constructors = constructorData.MRData?.StandingsTable?.StandingsLists[0]?.ConstructorStandings;
+        if (constructors) {
+            constructors.forEach(constructor => {
+                constructorsArray.push({
+                    Position: constructor.position,
+                    Name: constructor.Constructor.name,
+                    Points: constructor.points
+                });
+            });
+        }
+
+        // Return combined results
+        res.json({
+            success: true,
+            data: {
+                driversArray,
+                constructorsArray
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching F1 standings:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to fetch F1 standings'
+        });
     }
 });
 

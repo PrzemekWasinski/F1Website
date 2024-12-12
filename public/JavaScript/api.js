@@ -1,67 +1,45 @@
 const teamColours = {
-    "Red Bull": "#090085",
-    "Ferrari" : "#d90000",
-    "McLaren": "#d95a00",
-    "Mercedes": "#00d6c4",
-    "Aston Martin": "#00472a",
-    "Alpine F1 Team": "#ff36d3",
-    "Haas F1 Team": "#d6d6d6",
-    "RB F1 Team": "#0b00d4",
-    "Williams": "#0051ff",
-    "Sauber": "#02d610"
+    "Default": {"primary": "#333", "secondary": "#555"},
+    "Red Bull": {"primary": "#0000bf", "secondary": "#c90a0a"},
+    "Ferrari" : {"primary": "#d90000", "secondary": "#ffd817"},
+    "McLaren": {"primary": "#ff7300", "secondary": "#000000"},
+    "Mercedes": {"primary": "#00d6c4", "secondary": "#ababab"},
+    "Aston Martin": {"primary": "#005239", "secondary": "#b9db0b"},
+    "Alpine F1 Team": {"primary": "#ff36d3", "secondary": "#1166f7"},
+    "Haas F1 Team": {"primary": "#d6d6d6", "secondary": "#ff0000"},
+    "RB F1 Team": {"primary": "#0b00d4", "secondary": "#ff0000"},
+    "Williams": {"primary": "#0051ff", "secondary": "#00a6ff"},
+    "Sauber": {"primary": "#02d610", "secondary": "#000000"}
 }
 
+const studentID = "M00931085";
+
+
 async function getSeasonResults(year) {
-    const driversArray = [];
-    const constructorsArray = [];
-
-    const api = `https://ergast.com/api/f1/${year}`;
-
     try {
-        const driverResponse = await fetch(`${api}/driverStandings.json`);
-        const driverData = await driverResponse.json();
+        const response = await fetch(`/${studentID}/f1-standings/${year}`, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            }
+        });
 
-        const constructorResponse = await fetch(`${api}/constructorStandings.json`);
-        const constructorData = await constructorResponse.json();
-
-
-        const drivers = driverData["MRData"]["StandingsTable"]["StandingsLists"][0]["DriverStandings"];
-        for (let i = 0; i < drivers.length; i++) {
-            driversArray.push({
-                "Position": drivers[i]["position"],
-                "Name": `${drivers[i]["Driver"]["givenName"]} ${drivers[i]["Driver"]["familyName"]}`, 
-                "Team": drivers[i]["Constructors"][0]["name"],
-                "Points": drivers[i]["points"]      
-            });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch standings: ${response.status}`);
         }
 
-        // for (let i = 0; i < driversArray.length; i++) {
-        //     console.log(driversArray[i])
-        // }
-
-        const constructors = constructorData["MRData"]["StandingsTable"]["StandingsLists"][0]["ConstructorStandings"];
-
-        for (let i = 0; i < constructors.length; i++) {
-            constructorsArray.push({
-                "Position": constructors[i]["position"],
-                "Name": constructors[i]["Constructor"]["name"],
-                "Points": constructors[i]["points"]
-            });
-        }
-
-        // for (let i = 0; i < constructorsArray.length; i++) {
-        //     console.log(constructorsArray[i])
-        // }
-
-        return {"driversArray": driversArray, "constructorsArray": constructorsArray};
+        const data = await response.json();
+        console.log(data.data);
+        return data.data; // This will contain {driversArray, constructorsArray}
 
     } catch (error) {
         console.log(`${error} from api.js`);
+        return { driversArray: [], constructorsArray: [] };
     }
 }
 
 export function loadSeasonsTemplate() {
-    
     const date = new Date();
     let currentYear = date.getFullYear();
 
@@ -69,7 +47,7 @@ export function loadSeasonsTemplate() {
     contentDiv.innerHTML = "";  
 
     const select = document.createElement("select");
-    select.id = "year";
+    select.id = "seasons-year";
     select.name = "year";
 
     for (let i = currentYear; i >= 1958; i--) {
@@ -81,7 +59,7 @@ export function loadSeasonsTemplate() {
     contentDiv.appendChild(select);
 
     const seasonDiv = document.createElement("div");
-    seasonDiv.id = "yearDisplay";
+    seasonDiv.id = "seasons-year-display";
     contentDiv.appendChild(seasonDiv);
 
     select.addEventListener("change", function() {
@@ -98,6 +76,7 @@ export function loadSeasonsTemplate() {
         seasonDiv.innerHTML = "";  
 
         const containerDiv = document.createElement("div");
+        containerDiv.id = "seasons-container";
         containerDiv.style.display = "flex";
         containerDiv.style.justifyContent = "space-between"; 
         containerDiv.style.alignItems = "flex-start"; 
@@ -105,13 +84,16 @@ export function loadSeasonsTemplate() {
 
         // Drivers Section
         const driversDiv = document.createElement("div");
+        driversDiv.id = "seasons-drivers";
         driversDiv.style.flex = "0 1 45%";
         driversDiv.style.paddingRight = "20px"; 
         const driversTitle = document.createElement("h3");
+        driversTitle.id = "seasons-drivers-title";
         driversTitle.textContent = "Drivers:";
         driversDiv.appendChild(driversTitle);
 
         const driversList = document.createElement("ul");
+        driversList.id = "seasons-drivers-list";
         driversList.style.listStyleType = "none";
         driversList.style.padding = "0";
 
@@ -119,8 +101,9 @@ export function loadSeasonsTemplate() {
             const driverTeam = driversArray[i]["Team"];
 
             const li = document.createElement("li");
+            li.id = `seasons-driver-${i}`;
             if (driverTeam in teamColours) {
-                li.style.background = teamColours[driverTeam];
+                li.style.background = teamColours[driverTeam]["primary"];
             } else {
                 li.style.background = "#8a8a8a";
             }
@@ -130,17 +113,20 @@ export function loadSeasonsTemplate() {
             li.style.padding = "5px 10px";
 
             const nameSpan = document.createElement("span");
+            nameSpan.id = `seasons-driver-name-${i}`;
             nameSpan.style.flex = "1"; 
             nameSpan.style.marginRight = "10px"; 
             nameSpan.textContent = `${i + 1}:  ${driversArray[i].Name}`;
             li.appendChild(nameSpan);
 
             const pointsSpan = document.createElement("span");
+            pointsSpan.id = `seasons-driver-points-${i}`;
             pointsSpan.style.width = "80px"; 
             pointsSpan.textContent = `Pts: ${driversArray[i].Points.toString().padEnd(4)}`;
             li.appendChild(pointsSpan);
 
             const teamSpan = document.createElement("span");
+            teamSpan.id = `seasons-driver-team-${i}`;
             teamSpan.style.flex = "2";  
             teamSpan.textContent = `Team: ${driversArray[i].Team}`;
             li.appendChild(teamSpan);
@@ -152,21 +138,25 @@ export function loadSeasonsTemplate() {
         containerDiv.appendChild(driversDiv);
 
         const constructorsDiv = document.createElement("div");
+        constructorsDiv.id = "seasons-constructors";
         constructorsDiv.style.flex = "0 1 45%"; 
         const constructorsTitle = document.createElement("h3");
+        constructorsTitle.id = "seasons-constructors-title";
         constructorsTitle.textContent = "Constructors:";
         constructorsDiv.appendChild(constructorsTitle);
 
         const constructorsList = document.createElement("ul");
+        constructorsList.id = "seasons-constructors-list";
         constructorsList.style.listStyleType = "none";
         constructorsList.style.padding = "0";
 
         for (let i = 0; i < constructorsArray.length; i++) {
             const li = document.createElement("li");
+            li.id = `seasons-constructor-${i}`;
             const constructorName = constructorsArray[i]["Name"];
 
             if (constructorName in teamColours) {
-                li.style.background = teamColours[constructorName];
+                li.style.background = teamColours[constructorName]["primary"];
             } else {
                 li.style.background = "#8a8a8a";
             }
@@ -175,12 +165,14 @@ export function loadSeasonsTemplate() {
             li.style.padding = "5px 10px";
 
             const nameSpan = document.createElement("span");
+            nameSpan.id = `seasons-constructor-name-${i}`;
             nameSpan.style.flex = "1";
             nameSpan.style.marginRight = "10px"; 
             nameSpan.textContent = `${i + 1}:  ${constructorsArray[i].Name}`;
             li.appendChild(nameSpan);
 
             const pointsSpan = document.createElement("span");
+            pointsSpan.id = `seasons-constructor-points-${i}`;
             pointsSpan.style.width = "80px";
             pointsSpan.textContent = `Pts: ${constructorsArray[i].Points.toString().padEnd(4)}`;
             li.appendChild(pointsSpan);

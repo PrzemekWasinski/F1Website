@@ -3,36 +3,58 @@ import { loadContent } from "./pages.js";
 const studentID = "M00931085";
 
 const teamColours = {
-    "Red Bull": "#090085",
-    "Ferrari" : "#d90000",
-    "McLaren": "#d95a00",
-    "Mercedes": "#00d6c4",
-    "Aston Martin": "#00472a",
-    "Alpine F1 Team": "#ff36d3",
-    "Haas F1 Team": "#d6d6d6",
-    "RB F1 Team": "#0b00d4",
-    "Williams": "#0051ff",
-    "Sauber": "#02d610"
+    "Default": {"primary": "#333", "secondary": "#555"},
+    "Red Bull": {"primary": "#0000bf", "secondary": "#c90a0a"},
+    "Ferrari" : {"primary": "#d90000", "secondary": "#ffd817"},
+    "McLaren": {"primary": "#ff7300", "secondary": "#000000"},
+    "Mercedes": {"primary": "#00d6c4", "secondary": "#ababab"},
+    "Aston Martin": {"primary": "#005239", "secondary": "#b9db0b"},
+    "Alpine F1 Team": {"primary": "#ff36d3", "secondary": "#1166f7"},
+    "Haas F1 Team": {"primary": "#d6d6d6", "secondary": "#ff0000"},
+    "RB F1 Team": {"primary": "#0b00d4", "secondary": "#ff0000"},
+    "Williams": {"primary": "#0051ff", "secondary": "#00a6ff"},
+    "Sauber": {"primary": "#02d610", "secondary": "#000000"}
 }
 
-function applyTheme(team) {
+export function applyTheme(team) {
     const navBar = document.getElementById("navBar");
 
+    const userSearchButton = document.getElementById("userSearchButton");
+    const homePageButton = document.getElementById("homePageButton");
+    const seasonsButton = document.getElementById("seasonsButton");
+    const loginPageButton = document.getElementById("loginPageButton");
+    const logOutButton = document.getElementById("logOutButton");
+    const buttons = [userSearchButton, homePageButton, seasonsButton, loginPageButton, logOutButton]
+
     if (team in teamColours) {
-        navBar.style.backgroundColor = teamColours[team];
-        console.log("yes")
+        navBar.style.backgroundColor = teamColours[team]["primary"];
+        for (let i = 0; i < buttons.length; i++) {
+            if (buttons[i]) {
+                buttons[i].style.backgroundColor = teamColours[team]["secondary"]
+            }
+        }
+
     } else {
         navBar.style.backgroundColor = "#333";
-        console.log("no")
+        for (let i = 0; i < buttons.length; i++) {
+            if (buttons[i]) {
+                buttons[i].style.backgroundColor = "#555"
+            }
+        }
+        
     }
 };
 
 export async function login() {
+
     const loginUsername = document.getElementById("loginUsername").value;
     const loginPassword = document.getElementById("loginPassword").value;
 
+    const feedback = document.getElementById("loginErrorMessage");
+
     if (!loginUsername || !loginPassword) {
         console.log("All fields must be filled!");
+        feedback.innerHTML = "All fields must be filled"
         return;
     }
 
@@ -67,8 +89,12 @@ export async function login() {
                 applyTheme(loginResult["team"]);
                 localStorage.setItem("userTeam", loginResult["team"]);
                 console.log("Login successful!");
+                loadContent("homeTemplate");
+                document.getElementById("loginPageButton").style.display = "none";
+                document.getElementById("logOutButton").style.display = "block";
             } else {
                 console.log(`${loginResult} from: login()`);
+                feedback.innerHTML = loginResult["message"];
             }
         } else {
             console.log("Log out first")
@@ -80,8 +106,9 @@ export async function login() {
 }
 
 export async function logOut() {
-    const navBar = document.getElementById("navBar");
-    navBar.style.backgroundColor = "#333";
+    document.getElementById("loginPageButton").style.display = "block";
+    document.getElementById("logOutButton").style.display = "none";
+    applyTheme("Default")
     localStorage.removeItem("userTeam");
 
     try {

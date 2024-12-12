@@ -1,27 +1,21 @@
 import { loadProfile } from "./profile.js";
 
-function closeSearchPopup() {
-    document.getElementById("searchPopup").style.display = "none";
-}
+
 
 export function displaySearchResults(users) {
-    const searchPopup = document.getElementById("searchPopup");
+    const overlay = document.querySelector(".popup-overlay");
     const searchResults = document.getElementById("searchResults");
     
-    searchResults.innerHTML = `
-        <div class="search-header">
-            <button id="closeSearchButton" class="close-button">x</button>
-        </div>
-    `;
+    searchResults.innerHTML = '';
     
     if (users.length === 0) {
-        searchResults.innerHTML += "<p>No users found</p>";
+        searchResults.innerHTML = "<p>No users found</p>";
     } else {
         users.forEach(user => {
             const userDiv = document.createElement("div");
             userDiv.className = "user-result";
             userDiv.innerHTML = `
-                <a href="#" class="username-link"; closeSearchPopup(); return false;">${user.username}</a>
+                <a href="#" class="username-link">${user.username}</a>
             `;
             const usernameLink = userDiv.querySelector(".username-link");
             usernameLink.addEventListener("click", (event) => {
@@ -33,6 +27,18 @@ export function displaySearchResults(users) {
             searchResults.appendChild(userDiv);
         });
     }
-    searchPopup.style.display = "block";
+    
+    overlay.style.display = "block";
+    
     document.getElementById("closeSearchButton").addEventListener("click", closeSearchPopup);
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+            closeSearchPopup();
+        }
+    });
+}
+
+function closeSearchPopup() {
+    const overlay = document.querySelector(".popup-overlay");
+    overlay.style.display = "none";
 }

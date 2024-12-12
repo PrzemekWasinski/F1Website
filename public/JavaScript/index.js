@@ -1,18 +1,22 @@
-import { logOut, checkLoginStatus } from "./login.js";
+import { logOut, checkLoginStatus, applyTheme } from "./login.js";
 import { loadSeasonsTemplate } from "./api.js";
 import { displaySearchResults } from "./search.js";
-import { loadPosts, handleUpload } from "./contents.js";
+import { handleUpload } from "./contents.js";
 import { loadContent } from "./pages.js";
 
+window.onload = async function() {
+    document.getElementById("logOutButton").style.display = "none";
+    document.getElementById("loginPageButton").style.display = "block";
+    await checkLoginStatus();
+    loadContent("homeTemplate");
+    applyTheme("Default")
+    document.getElementById('uploadForm').addEventListener('submit', handleUpload());
+};
 
 const studentID = "M00931085";
 
 document.getElementById("homePageButton").addEventListener("click", function() {
     loadContent("homeTemplate");
-});
-
-document.getElementById("registerPageButton").addEventListener("click", function() {
-    loadContent("registerTemplate")
 });
 
 document.getElementById("loginPageButton").addEventListener("click", function() {
@@ -27,27 +31,28 @@ document.getElementById("logOutButton").addEventListener("click", function() {
     logOut();
 })
 
-// Modify window.onload to load posts
-window.onload = async function() {
-    await checkLoginStatus();
-    loadContent("homeTemplate");
-    document.getElementById('uploadForm').addEventListener('submit', handleUpload());
-};
-
 const userSearchInput = document.getElementById("userSearch");
 const userSearchButton = document.getElementById("userSearchButton");
 
-const searchPopup = document.createElement("div");
-searchPopup.innerHTML = `
-    <div id="searchPopup" class="popup" style="display: none;">
+// Create overlay
+const overlay = document.createElement("div");
+overlay.className = "popup-overlay";
+document.body.appendChild(overlay);
+
+// Create popup
+const searchPopupContainer = document.createElement("div");
+searchPopupContainer.innerHTML = `
+    <div id="searchPopup">
         <div class="popup-content">
-            <span class="close" onclick="closeSearchPopup()">&times;</span>
-            <h3>Search Results</h3>
+            <div class="search-header">
+                <h3 class="search-title">Search Results</h3>
+                <button id="closeSearchButton" class="close-button">×</button>
+            </div>
             <div id="searchResults"></div>
         </div>
     </div>
 `;
-document.body.appendChild(searchPopup);
+overlay.appendChild(searchPopupContainer);
 
 userSearchButton.addEventListener("click", async () => {
     const searchTerm = userSearchInput.value.trim();
@@ -62,11 +67,8 @@ userSearchButton.addEventListener("click", async () => {
         });
 
         const users = await response.json();
-        displaySearchResults(users);
+        displaySearchResults(users, searchTerm);
     } catch (error) {
         console.error(`${error} from: User search GET`);
     }
 });
-
-
-

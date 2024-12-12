@@ -11,7 +11,64 @@ export async function loadContent(templateId) {
     contentDiv.innerHTML = ""; 
     contentDiv.appendChild(template.content.cloneNode(true)); 
 
+    const loginStatus = await checkLoginStatus();
+
+    if (loginStatus["status"] === "logged_in") {
+        document.getElementById("loginPageButton").style.display = "none";
+        document.getElementById("logOutButton").style.display = "block";
+    } else {
+        document.getElementById("logOutButton").style.display = "none";
+        document.getElementById("loginPageButton").style.display = "block";
+    }
+
     if (templateId === "homeTemplate") {
+        if (loginStatus["status"] !== "logged_in") {
+            document.getElementById("followedPostsToggle").style.display = "none";
+        }
+        const followedPostsToggle = document.getElementById("followedPostsToggle");
+        if (followedPostsToggle) {
+            followedPostsToggle.addEventListener("click", async function() {
+                const button = this;
+                try {
+                    if (loginStatus.status !== "logged_in") {
+                        alert("Please log in to view posts from followed users");
+                        return;
+                    }
+        
+                    const showingFollowed = button.textContent === "Show All Posts";
+                    button.disabled = true;
+        
+                    const response = await fetch(`/${studentID}/contents`, {
+                        method: "GET",
+                        headers: {
+                            "Accept": "application/json",
+                            "Content-Type": "application/json"
+                        }
+                    });
+        
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch posts");
+                    }
+        
+                    const posts = await response.json();
+                    const filteredPosts = showingFollowed 
+                        ? posts 
+                        : posts.filter(post => post.followedByUser);
+        
+                    await displayPosts(filteredPosts);
+                    
+                    button.textContent = showingFollowed 
+                        ? "Show Followed Users' Posts"
+                        : "Show All Posts";
+        
+                } catch (error) {
+                    console.error('Error toggling posts:', error);
+                    alert(`Error: ${error.message}`);
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        }
         try {
             await loadPosts();
 
@@ -111,11 +168,26 @@ export async function loadContent(templateId) {
             });
         }
 
-    } else if (templateId === "registerTemplate") {
-        const registerButton = document.getElementById("registerButton");
-        if (registerButton) {
-            registerButton.addEventListener("click", function() {
-                register();
+        const registerPageButton = document.getElementById("loginRegisterPageButton");
+
+        if (registerPageButton) {
+            registerPageButton.addEventListener("click", function() {
+                const contentDiv = document.getElementById("content");
+                const template = document.getElementById("registerTemplate");
+
+                if (template) { // Check if the template exists
+                    contentDiv.innerHTML = ""; // Clear current content
+                    contentDiv.appendChild(template.content.cloneNode(true)); // Clone and append the template content
+                } else {
+                    console.error("registerTemplate not found");
+                }
+
+                const registerButton = document.getElementById("registerButton");
+                if (registerButton) {
+                    registerButton.addEventListener("click", function() {
+                        register();
+                    });
+                }
             });
         }
     }

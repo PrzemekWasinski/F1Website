@@ -1,5 +1,6 @@
 import { checkLoginStatus } from "./login.js";
 import { loadProfile } from "./profile.js";
+
 const allowedExtensions = ["jpg", "jpeg", "png", "gif", "mp4", "webm", "mp3", "wav"]; 
 
 const studentID = "M00931085";
@@ -67,7 +68,8 @@ export async function loadPosts() {
             headers: {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
-            }
+            },
+            credentials: 'same-origin'
         });
 
         if (!response.ok) {
@@ -84,9 +86,10 @@ export async function loadPosts() {
         }
 
         const posts = await response.json();
-        displayPosts(posts);
+        await displayPosts(posts);
     } catch (error) {
         console.error('Error in loadPosts:', error);
+        throw error;
     }
 }
 
@@ -122,15 +125,10 @@ export async function addComment(postId, username, comment) {
             body: JSON.stringify({ username, comment })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to add comment');
-        }
 
         return await response.json();
     } catch (error) {
         console.error('Error in addComment:', error);
-        throw error;
     }
 }
 
@@ -147,7 +145,6 @@ export async function getComments(postId) {
         return comments;
     } catch (error) {
         console.error('Error in getComments:', error);
-        throw error;
     }
 }
 
@@ -172,6 +169,7 @@ export async function displayPosts(posts) {
                 </div>
             </div>
         `;
+        modal.style.fontFamily = "helvetica"
         document.body.appendChild(modal.firstElementChild);
 
         if (!document.getElementById('commentsModalStyle')) {
@@ -201,7 +199,9 @@ export async function displayPosts(posts) {
 
     const fragment = document.createDocumentFragment();
 
-    for (const post of posts) {
+    for (let i = posts.length - 1; i >= 0; i--) {
+        const post = posts[i];
+
         const postElement = document.createElement("div");
         postElement.className = "post";
         
@@ -227,9 +227,24 @@ export async function displayPosts(posts) {
             }
         }
 
-        const likesCount = post.likes ? post.likes.length : 0;
-        const isLiked = post.likes && currentUsername && post.likes.includes(currentUsername);
-        const commentsCount = post.comments ? post.comments.length : 0;
+        let likesCount = 0;
+        if (post.likes) {
+            likesCount = post.likes.length;
+        }
+
+        let isLiked = false;
+        if (post.likes && currentUsername) {
+            if (post.likes.includes(currentUsername)) {
+                isLiked = true;
+            }
+        }
+
+        let commentsCount = 0;
+        if (Array.isArray(post.comments)) {
+            commentsCount = post.comments.length;
+        }
+
+
 
         const actionButtons = isLoggedIn ? `
             <div class="post-actions">
@@ -248,15 +263,15 @@ export async function displayPosts(posts) {
         `;
 
         postElement.innerHTML = `
+            <small>Posted by: 
+                <a href="#" class="username-link" data-username="${post.username}">
+                    ${post.username}
+                </a>
+            </small>
             <h3>${post.title}</h3>
             <p>${post.description}</p>
             ${fileDisplay}
             <div class="post-footer">
-                <small>Posted by: 
-                    <a href="#" class="username-link" data-username="${post.username}">
-                        ${post.username}
-                    </a>
-                </small>
                 ${actionButtons}
             </div>
         `;
@@ -279,7 +294,6 @@ export async function displayPosts(posts) {
                     post.likes = result.likes;
                 } catch (error) {
                     console.error('Failed to toggle like:', error);
-                    alert('Failed to update like status. Please try again.');
                 }
             });
 
@@ -315,18 +329,11 @@ export async function displayPosts(posts) {
                             commentElement.innerHTML = `<strong>${currentUsername}:</strong> ${commentText}`;
                             commentsList.appendChild(commentElement);
                             
-                            if (!post.comments) post.comments = [];
-                            post.comments.push({
-                                username: currentUsername,
-                                text: commentText
-                            });
-                            
                             commentBtn.textContent = `Comment (${post.comments.length})`;
                             newCommentInput.value = '';
                             
                         } catch (error) {
                             console.error('Failed to add comment:', error);
-                            alert('Failed to add comment. Please try again.');
                         }
                     }
                 });

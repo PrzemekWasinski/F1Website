@@ -1,5 +1,6 @@
 import { checkLoginStatus } from "./login.js";
 import { loadContent } from "./pages.js";
+import { toggleLike, addComment, getComments } from "./contents.js";
 
 const studentID = "M00931085";
 
@@ -39,11 +40,43 @@ async function unfollowUser(username) {
     }
 }
 
-export async function loadProfile(username) { 
+export async function loadProfile(username) {
     let buttonText = "Follow";
     let isFollowing = false;
     
     try {
+        // Add modal HTML if it doesn't exist
+        if (!document.getElementById('commentsModal')) {
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div id="commentsModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-modal">&times;</span>
+                        <h3>Comments</h3>
+                        <div class="comments-list"></div>
+                        <div class="new-comment-section">
+                            <input type="text" id="newCommentInput" placeholder="Write a comment...">
+                            <button id="submitComment">Post</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modal.style.fontFamily = "helvetica";
+            document.body.appendChild(modal.firstElementChild);
+        }
+
+        // Set up modal functionality
+        const modal = document.getElementById('commentsModal');
+        const closeModal = document.querySelector('.close-modal');
+        closeModal.onclick = () => modal.style.display = "none";
+
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        };
+
+        // Check following status
         const followingResponse = await fetch(`/${studentID}/follow/:${username}`, {
             method: "GET",
             headers: {
@@ -52,15 +85,14 @@ export async function loadProfile(username) {
         });
 
         const followingResult = await followingResponse.json();
-        
         if (followingResult.following && followingResult.following.length > 0) {
             if (followingResult["following"].includes(username)) {
                 buttonText = "Unfollow";
-            } else {
-                buttonText = "Follow";
+                isFollowing = true;
             }
         }
 
+        // Get posts
         const postsResponse = await fetch(`/${studentID}/users/${username}/posts`, {
             method: "GET",
             headers: {
@@ -76,7 +108,9 @@ export async function loadProfile(username) {
         const currentUser = loginStatus.username;
 
         let postsHTML = "";
-        for (const post of posts) {
+        for (let i = posts.length - 1; i >= 0; i--) {
+            const post = posts[i];
+        
             let fileDisplay = "";
             if (post.fileName) {
                 const filePath = `/uploads/${post.fileName}`;
@@ -84,28 +118,24 @@ export async function loadProfile(username) {
                 
                 if (["jpg", "jpeg", "png", "gif"].includes(fileExtension)) {
                     fileDisplay = `
-                        <div class="post-media">
-                            <div class="post-image-container">
-                                <img src="${filePath}" alt="Uploaded content" class="post-image">
-                            </div>
+                        <div class="media-container">
+                            <img src="${filePath}" alt="Uploaded content" class="post-image">
                         </div>`;
                 }
                 else if (["mp4", "webm"].includes(fileExtension)) {
                     fileDisplay = `
-                        <div class="post-media">
-                            <div class="post-video-container">
-                                <video controls class="post-video">
-                                    <source src="${filePath}" type="video/${fileExtension}">
-                                    Your browser does not support the video tag.
-                                </video>
-                            </div>
+                        <div class="media-container">
+                            <video controls class="post-video">
+                                <source src="${filePath}" type="video/${fileExtension}">
+                                Your browser does not support the video tag.
+                            </video>
                         </div>`;
                 }
             }
 
-            const likesCount = post.likes ? post.likes.length : 0;
-            const isLiked = post.likes && currentUser && post.likes.includes(currentUser);
-            const commentsCount = post.comments ? post.comments.length : 0;
+            let likesCount = post.likes ? post.likes.length : 0;
+            let isLiked = post.likes && currentUser ? post.likes.includes(currentUser) : false;
+            let commentsCount = post.comments ? post.comments.length : 0;
 
             const actionButtons = isLoggedIn ? `
                 <div class="post-actions">
@@ -113,7 +143,7 @@ export async function loadProfile(username) {
                         ${isLiked ? 'Unlike' : 'Like'} (${likesCount})
                     </button>
                     <button class="comment-btn" data-post-id="${post._id}">
-                        Comment (${commentsCount})
+                        Comments (${commentsCount})
                     </button>
                 </div>
             ` : `
@@ -124,13 +154,13 @@ export async function loadProfile(username) {
             `;
 
             postsHTML += `
-                <div class="post">
+                <div class="post" data-post-index="${i}">
                     <div class="post-content">
+                        <small>Posted by: ${post.username}</small>
                         <h3 class="post-title">${post.title}</h3>
                         <p class="post-description">${post.description}</p>
                         ${fileDisplay}
                         <div class="post-footer">
-                            <small>Posted by: ${post.username}</small>
                             ${actionButtons}
                         </div>
                     </div>
@@ -160,23 +190,30 @@ export async function loadProfile(username) {
 
         loadContent("profileTemplate");
 
+        // Follow button functionality
         const followButton = document.getElementById("followButton");
         if (followButton) {
             followButton.addEventListener("click", async () => {
-                if (isFollowing) {
-                    await unfollowUser(username);
-                    followButton.textContent = "Follow";
-                    isFollowing = false;
-                } else {
-                    await followUser(username);
-                    followButton.textContent = "Unfollow";
-                    isFollowing = true;
+                try {
+                    if (isFollowing) {
+                        await unfollowUser(username);
+                        followButton.textContent = "Follow";
+                        isFollowing = false;
+                    } else {
+                        await followUser(username);
+                        followButton.textContent = "Unfollow";
+                        isFollowing = true;
+                    }
+                } catch (error) {
+                    console.error('Failed to update follow status:', error);
+                    alert('Failed to update follow status. Please try again.');
                 }
             });
         }
 
-        // Add event listeners for like and comment buttons if user is logged in
+        // Like and comment functionality
         if (isLoggedIn) {
+            // Like button functionality
             document.querySelectorAll('.like-btn').forEach(button => {
                 button.addEventListener('click', async (event) => {
                     const postId = event.target.dataset.postId;
@@ -193,16 +230,66 @@ export async function loadProfile(username) {
                 });
             });
 
-            document.querySelectorAll('.comment-btn').forEach(button => {
+            // Comment button functionality
+            document.querySelectorAll('.comment-btn').forEach((button) => {
                 button.addEventListener('click', async (event) => {
                     const postId = event.target.dataset.postId;
-                    // Implement your comment functionality here
-                    // This should open your comment modal or comment interface
+                    const postElement = event.target.closest('.post');
+                    const postIndex = posts.length - 1 - parseInt(postElement.dataset.postIndex);
+                    const post = posts[postIndex];
+
+                    modal.style.display = "block";
+                    const commentsList = modal.querySelector('.comments-list');
+                    commentsList.innerHTML = '';
+                    
+                    if (post.comments && post.comments.length > 0) {
+                        post.comments.forEach(comment => {
+                            const commentElement = document.createElement('div');
+                            commentElement.className = 'comment';
+                            commentElement.innerHTML = `<strong>${comment.username}:</strong> ${comment.text}`;
+                            commentsList.appendChild(commentElement);
+                        });
+                    }
+
+                    const submitComment = document.getElementById('submitComment');
+                    const newCommentInput = document.getElementById('newCommentInput');
+                    newCommentInput.value = '';
+
+                    const handleSubmit = async () => {
+                        const commentText = newCommentInput.value.trim();
+                        if (commentText) {
+                            try {
+                                const result = await addComment(postId, currentUser, commentText);
+                                
+                                const commentElement = document.createElement('div');
+                                commentElement.className = 'comment';
+                                commentElement.innerHTML = `<strong>${currentUser}:</strong> ${commentText}`;
+                                commentsList.appendChild(commentElement);
+                                
+                                post.comments = post.comments || [];
+                                post.comments.push({ username: currentUser, text: commentText });
+                                button.textContent = `Comments (${post.comments.length})`;
+                                
+                                newCommentInput.value = '';
+                                
+                            } catch (error) {
+                                console.error('Failed to add comment:', error);
+                                alert('Failed to add comment. Please try again.');
+                            }
+                        }
+                    };
+
+                    submitComment.onclick = handleSubmit;
+                    newCommentInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') {
+                            handleSubmit();
+                        }
+                    };
                 });
             });
         }
 
     } catch (error) {
-        console.log(`${error} from: ()`);
+        console.error(`Error in loadProfile:`, error);
     }
 }
